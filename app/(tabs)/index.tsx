@@ -1,5 +1,4 @@
 // app/(tabs)/index.tsx
-import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PokemonList from '../../components/ui/pokemon-list'; // ✅ relatieve import
