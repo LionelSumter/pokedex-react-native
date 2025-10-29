@@ -4,9 +4,8 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Tabs } from 'expo-router';
-import React from 'react';
 
-export default function TabsLayout() {
+export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
@@ -18,7 +17,6 @@ export default function TabsLayout() {
         tabBarButton: HapticTab,
       }}
     >
-      {/* All Pokémon */}
       <Tabs.Screen
         name="index"
         options={{
@@ -28,21 +26,16 @@ export default function TabsLayout() {
           ),
         }}
       />
-
-      {/* Favorites */}
       <Tabs.Screen
         name="favorites"
         options={{
           title: 'Favorites',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="heart.fill" color={color} />
+            <IconSymbol size={28} name="star.fill" color={color} />
           ),
         }}
       />
-
-      {/* Verberg eventueel oude screens uit de template */}
-      <Tabs.Screen name="explore" options={{ href: null }} />
-      <Tabs.Screen name="pokemon" options={{ href: null }} />
+      {/* ⚠️ GEEN 'pokemon' tab hier! Detail zit in app/pokemon/[id].tsx als stack route */}
     </Tabs>
   );
 }
