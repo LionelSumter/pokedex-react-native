@@ -3,6 +3,7 @@ import { PokeApiService } from '@/services/pokemon-api';
 import { useQuery } from '@tanstack/react-query';
 import { NamedAPIResource } from 'pokenode-ts';
 
+// ---------- Types & helpers ----------
 export type PokemonWithId = NamedAPIResource & { id: string };
 
 export function getPokemonIdFromUrl(url: string): string | null {
@@ -16,7 +17,7 @@ const mapWithResourceId = (r: NamedAPIResource): PokemonWithId => {
   return { id, ...r };
 };
 
-// Signature: (limit, offset). PokeAPI: listPokemons(offset, limit)
+// ---------- Hook 1: Pokémon lijst ----------
 export const usePokemonList = (limit: number = 20, offset: number = 0) => {
   return useQuery<PokemonWithId[]>({
     queryKey: ['pokemon-list', limit, offset],
@@ -25,5 +26,15 @@ export const usePokemonList = (limit: number = 20, offset: number = 0) => {
       return res.results.map(mapWithResourceId);
     },
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ---------- ✅ Hook 2: Pokémon detail (op naam) ----------
+export const usePokemonByName = (name: string) => {
+  return useQuery({
+    queryKey: ['pokemon', name],
+    queryFn: () => PokeApiService.getPokemonByName(name),
+    enabled: !!name, // alleen fetchen als er een naam is
+    staleTime: 10 * 60 * 1000, // 10 minuten cache
   });
 };
