@@ -1,19 +1,27 @@
 // app/(tabs)/index.tsx
-import { PokemonWithId, usePokemonList } from '@/hooks/use-pokemon';
+import { PokemonWithId, useInfinitePokemonList } from '@/hooks/use-pokemon';
 import { router } from 'expo-router';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useMemo } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AllPokemonScreen() {
-  // Voorbeeld: 20 items vanaf offset 0
-  const { data: pokemonList, isLoading, error } = usePokemonList(20, 0);
+  const pageSize = 20;
+  const {
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching,
+  } = useInfinitePokemonList(pageSize);
+
+  const items: PokemonWithId[] = useMemo(
+    () => (data?.pages ?? []).flatMap((p) => p.items),
+    [data?.pages]
+  );
 
   if (isLoading) {
     return (
@@ -29,6 +37,9 @@ export default function AllPokemonScreen() {
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Error loading Pokémon:</Text>
         <Text style={styles.infoText}>{error.message}</Text>
+        <Pressable onPress={() => refetch()} style={styles.retryBtn}>
+          <Text style={styles.retryText}>Opnieuw</Text>
+        </Pressable>
       </View>
     );
   }
@@ -50,16 +61,30 @@ export default function AllPokemonScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.title}>
-          Pokémon List ({pokemonList?.length || 0})
+          Pokémon List ({items.length})
         </Text>
       </View>
 
       <FlatList
-        data={pokemonList}
+        data={items}
         renderItem={renderItem}
         keyExtractor={(item) => item.id || item.name}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContainer}
+        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+        }}
+        refreshing={isRefetching}
+        onRefresh={() => refetch()}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.footer}>
+              <ActivityIndicator />
+              <Text style={styles.infoText}>Meer laden…</Text>
+            </View>
+          ) : null
+        }
       />
     </SafeAreaView>
   );
@@ -86,4 +111,13 @@ const styles = StyleSheet.create({
   },
   pokemonName: { fontSize: 16, fontWeight: '700', textTransform: 'capitalize' },
   pokemonId: { marginTop: 4, color: '#6B7280', fontWeight: '600' },
+  retryBtn: {
+    marginTop: 12,
+    backgroundColor: '#111827',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: { color: '#fff', fontWeight: '700' },
+  footer: { paddingVertical: 12, alignItems: 'center' },
 });
