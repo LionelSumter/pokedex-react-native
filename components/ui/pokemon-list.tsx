@@ -17,9 +17,8 @@ type Props = {
 };
 
 export default function PokemonList({ data, contentPadding = 16 }: Props) {
-  // ✅ Nieuwe navigatiefunctie — opent detailpagina op basis van naam
   const handlePokemonPress = (pokemonName: string) => {
-    router.push(`/pokemon/${pokemonName}`);
+    router.push(`/pokemon/${pokemonName}`); // ✅ navigeer naar [name]
   };
 
   const renderItem = ({ item }: { item: Pokemon }) => {
@@ -33,7 +32,6 @@ export default function PokemonList({ data, contentPadding = 16 }: Props) {
         }
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       >
-        {/* Bovenkant: ID + Type */}
         <View style={styles.cardTopRow}>
           <View style={styles.idBadge}>
             <Text style={styles.idText}>#{idLabel}</Text>
@@ -41,10 +39,8 @@ export default function PokemonList({ data, contentPadding = 16 }: Props) {
           <Text style={styles.typeText}>{item.type}</Text>
         </View>
 
-        {/* Placeholder voor afbeelding */}
         <View style={styles.imageBox} />
 
-        {/* Naam van Pokémon */}
         <Text style={styles.name}>{item.name}</Text>
       </Pressable>
     );
@@ -82,44 +78,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  cardPressed: {
-    transform: [{ scale: Platform.select({ ios: 0.98, android: 0.99 })! }],
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  idBadge: {
-    backgroundColor: '#6E56CF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  idText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
-    letterSpacing: 0.3,
-  },
+  cardPressed: { transform: [{ scale: Platform.select({ ios: 0.98, android: 0.99 })! }] },
+  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  idBadge: { backgroundColor: '#6E56CF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  idText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12, letterSpacing: 0.3 },
   typeText: { color: '#6B7280', fontSize: 12, fontWeight: '600' },
-  imageBox: {
-    backgroundColor: '#F1ECFF',
-    borderRadius: 12,
-    aspectRatio: 1.2,
-    marginBottom: 10,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    textTransform: 'capitalize',
-  },
-  empty: {
-    padding: 16,
-    textAlign: 'center',
-    color: '#DC0A2D',
-    fontWeight: '700',
-  },
+  imageBox: { backgroundColor: '#F1ECFF', borderRadius: 12, aspectRatio: 1.2, marginBottom: 10 },
+  name: { fontSize: 16, fontWeight: '700', color: '#111827', textTransform: 'capitalize' },
+  empty: { padding: 16, textAlign: 'center', color: '#DC0A2D', fontWeight: '700' },
 });

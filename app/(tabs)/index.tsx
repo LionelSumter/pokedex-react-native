@@ -37,13 +37,10 @@ export default function AllPokemonScreen() {
     const label = item.id ? `#${item.id.padStart(3, '0')}` : '';
     return (
       <Pressable
-        onPress={() =>
-          router.push({ pathname: '/pokemon/[id]', params: { id: item.id } } as any)
-        }
+        onPress={() => router.push(`/pokemon/${item.name}`)}
         style={styles.pokemonItem}
       >
         <Text style={styles.pokemonName}>{item.name}</Text>
-        {/* 👉 Step 7: toon het ID */}
         <Text style={styles.pokemonId}>ID: {label}</Text>
       </Pressable>
     );
