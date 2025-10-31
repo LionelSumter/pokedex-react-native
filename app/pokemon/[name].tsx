@@ -1,3 +1,4 @@
+import { PokemonImage } from '@/components/ui/pokemon-image';
 import { usePokemonByName } from '@/hooks/use-pokemon';
 import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -37,20 +38,20 @@ export default function PokemonDetailScreen() {
           </Text>
           <Text style={styles.pokemonId}>#{pokemon.id.toString().padStart(3, '0')}</Text>
         </View>
-        
-        {/* Pokemon Image will go here */}
+
+        {/* ✅ Hier komt nu de echte afbeelding */}
         <View style={styles.imageContainer}>
-          <Text style={styles.placeholderText}>Pokemon Image</Text>
+          <PokemonImage id={pokemon.id} size={200} />
         </View>
-        
+
         <View style={styles.detailsContainer}>
           <Text style={styles.sectionTitle}>Types</Text>
           <View style={styles.typesContainer}>
             {pokemon.types.map((typeInfo, index) => (
               <View key={index} style={styles.typeBadge}>
                 <Text style={styles.typeText}>
-                  {typeInfo.type.name.charAt(0).toUpperCase() + 
-                   typeInfo.type.name.slice(1)}
+                  {typeInfo.type.name.charAt(0).toUpperCase() +
+                    typeInfo.type.name.slice(1)}
                 </Text>
               </View>
             ))}
@@ -112,10 +113,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: 12,
     marginBottom: 16,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#999',
   },
   detailsContainer: {
     padding: 16,
