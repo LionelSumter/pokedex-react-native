@@ -9,43 +9,42 @@ import {
   Text,
   View,
 } from 'react-native';
-
-// ✅ Eigen, flexibele itemtype: werkt met local data én API data
-type ListItem = {
-  id: number | string;
-  name: string;
-  type?: string; // optioneel—API lijst heeft geen type
-};
+import type { Pokemon } from '../../constants/pokemon';
 
 type Props = {
-  data: ListItem[];
+  data: Pokemon[];
   contentPadding?: number;
 };
 
 export default function PokemonList({ data, contentPadding = 16 }: Props) {
-  const renderItem = ({ item }: { item: ListItem }) => {
-    const idLabel = String(item.id ?? '').padStart(3, '0');
+  // ✅ Nieuwe navigatiefunctie — opent detailpagina op basis van naam
+  const handlePokemonPress = (pokemonName: string) => {
+    router.push(`/pokemon/${pokemonName}`);
+  };
+
+  const renderItem = ({ item }: { item: Pokemon }) => {
+    const idLabel = String(item.id).padStart(3, '0');
 
     return (
       <Pressable
-        // ✅ Navigeer nu op basis van naam naar /pokemon/[name]
-        onPress={() =>
-          router.push({ pathname: '/pokemon/[name]', params: { name: item.name } } as any)
-        }
+        onPress={() => handlePokemonPress(item.name)}
         onLongPress={() =>
-          Alert.alert('Pokémon', `Long press: ${item.name}${idLabel ? ` (#${idLabel})` : ''}`)
+          Alert.alert('Pokémon', `Long press: ${item.name} (#${idLabel})`)
         }
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       >
+        {/* Bovenkant: ID + Type */}
         <View style={styles.cardTopRow}>
           <View style={styles.idBadge}>
-            <Text style={styles.idText}>{idLabel ? `#${idLabel}` : '#—'}</Text>
+            <Text style={styles.idText}>#{idLabel}</Text>
           </View>
-          <Text style={styles.typeText}>{item.type ?? '—'}</Text>
+          <Text style={styles.typeText}>{item.type}</Text>
         </View>
 
+        {/* Placeholder voor afbeelding */}
         <View style={styles.imageBox} />
 
+        {/* Naam van Pokémon */}
         <Text style={styles.name}>{item.name}</Text>
       </Pressable>
     );
@@ -54,12 +53,17 @@ export default function PokemonList({ data, contentPadding = 16 }: Props) {
   return (
     <FlatList
       data={data}
-      keyExtractor={(item) => String(item.id ?? item.name)}
+      keyExtractor={(item) => String(item.id)}
       numColumns={2}
       columnWrapperStyle={styles.column}
-      contentContainerStyle={[styles.contentContainer, { paddingHorizontal: contentPadding }]}
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingHorizontal: contentPadding },
+      ]}
       renderItem={renderItem}
-      ListEmptyComponent={<Text style={styles.empty}>Geen Pokémon gevonden…</Text>}
+      ListEmptyComponent={
+        <Text style={styles.empty}>Geen Pokémon gevonden…</Text>
+      }
     />
   );
 }
@@ -78,12 +82,44 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  cardPressed: { transform: [{ scale: Platform.select({ ios: 0.98, android: 0.99 })! }] },
-  cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  idBadge: { backgroundColor: '#6E56CF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  idText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12, letterSpacing: 0.3 },
+  cardPressed: {
+    transform: [{ scale: Platform.select({ ios: 0.98, android: 0.99 })! }],
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  idBadge: {
+    backgroundColor: '#6E56CF',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  idText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
   typeText: { color: '#6B7280', fontSize: 12, fontWeight: '600' },
-  imageBox: { backgroundColor: '#F1ECFF', borderRadius: 12, aspectRatio: 1.2, marginBottom: 10 },
-  name: { fontSize: 16, fontWeight: '700', color: '#111827', textTransform: 'capitalize' },
-  empty: { padding: 16, textAlign: 'center', color: '#DC0A2D', fontWeight: '700' },
+  imageBox: {
+    backgroundColor: '#F1ECFF',
+    borderRadius: 12,
+    aspectRatio: 1.2,
+    marginBottom: 10,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    textTransform: 'capitalize',
+  },
+  empty: {
+    padding: 16,
+    textAlign: 'center',
+    color: '#DC0A2D',
+    fontWeight: '700',
+  },
 });
