@@ -1,5 +1,5 @@
 // components/ui/pokemon-list.tsx
-import React from 'react';
+import { router } from 'expo-router';
 import {
   Alert,
   FlatList,
@@ -9,36 +9,39 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
-import type { Pokemon } from '../../constants/pokemon';
+
+// ✅ Eigen, flexibele itemtype: werkt met local data én API data
+type ListItem = {
+  id: number | string;
+  name: string;
+  type?: string; // optioneel—API lijst heeft geen type
+};
 
 type Props = {
-  data: Pokemon[];
+  data: ListItem[];
   contentPadding?: number;
 };
 
 export default function PokemonList({ data, contentPadding = 16 }: Props) {
-  const renderItem = ({ item }: { item: Pokemon }) => {
-    const idLabel = String(item.id).padStart(3, '0');
+  const renderItem = ({ item }: { item: ListItem }) => {
+    const idLabel = String(item.id ?? '').padStart(3, '0');
 
     return (
       <Pressable
-        // ✅ objectvorm; werkt zonder app.d.ts (met as any om TS te sussen)
+        // ✅ Navigeer nu op basis van naam naar /pokemon/[name]
         onPress={() =>
-          router.push(
-            { pathname: '/pokemon/[id]', params: { id: String(item.id) } } as any
-          )
+          router.push({ pathname: '/pokemon/[name]', params: { name: item.name } } as any)
         }
         onLongPress={() =>
-          Alert.alert('Pokémon', `Long press: ${item.name} (#${idLabel})`)
+          Alert.alert('Pokémon', `Long press: ${item.name}${idLabel ? ` (#${idLabel})` : ''}`)
         }
         style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       >
         <View style={styles.cardTopRow}>
           <View style={styles.idBadge}>
-            <Text style={styles.idText}>#{idLabel}</Text>
+            <Text style={styles.idText}>{idLabel ? `#${idLabel}` : '#—'}</Text>
           </View>
-          <Text style={styles.typeText}>{item.type}</Text>
+          <Text style={styles.typeText}>{item.type ?? '—'}</Text>
         </View>
 
         <View style={styles.imageBox} />
@@ -51,7 +54,7 @@ export default function PokemonList({ data, contentPadding = 16 }: Props) {
   return (
     <FlatList
       data={data}
-      keyExtractor={(item) => String(item.id)}
+      keyExtractor={(item) => String(item.id ?? item.name)}
       numColumns={2}
       columnWrapperStyle={styles.column}
       contentContainerStyle={[styles.contentContainer, { paddingHorizontal: contentPadding }]}
