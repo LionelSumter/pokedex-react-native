@@ -1,11 +1,10 @@
 // app/pokemon/[name].tsx
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import Favorite from '@/components/ui/favorite';
 import { PokemonImage } from '@/components/ui/pokemon-image';
 import { useEvolutionChainByName, usePokemonByName } from '@/hooks/use-pokemon';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
     Image,
     Pressable,
     ScrollView,
@@ -14,6 +13,15 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Skeletons
+import {
+    SkeletonAboutCard,
+    SkeletonEvolutionList,
+    SkeletonHero,
+    SkeletonStatsCard,
+    SkeletonTabs,
+} from '@/components/ui/Skeleton';
 
 const TYPE_COLORS: Record<string, string> = {
   normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
@@ -24,15 +32,23 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const HERO_H = 420;
-const EV_IMG_BOX_W = 96; // breedte grijze kolom
+const EV_IMG_BOX_W = 96;
 
 export default function PokemonDetailScreen() {
   const { name } = useLocalSearchParams<{ name: string }>();
-  const { data: pokemon, isLoading, error } = usePokemonByName(name ?? '');
-  const { steps: evoSteps } = useEvolutionChainByName(name ?? ''); // gebruikt 2 queries intern
+
+  const {
+    data: pokemon,
+    isLoading: isPokemonLoading,
+    error,
+  } = usePokemonByName(name ?? '');
+
+  const {
+    steps: evoSteps,
+    isLoading: isEvoLoading,
+  } = useEvolutionChainByName(name ?? '');
 
   const [tab, setTab] = useState<'about' | 'stats' | 'evolution'>('about');
-  const [fav, setFav] = useState(false);
 
   const prettyId = useMemo(
     () => (pokemon ? `#${String(pokemon.id).padStart(3, '0')}` : ''),
@@ -52,19 +68,32 @@ export default function PokemonDetailScreen() {
     return pokemon.types.map((t) => capitalize(t.type.name)).join(', ');
   }, [pokemon]);
 
-  if (isLoading) {
+  // LOADING → skeletons
+  if (isPokemonLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#6E56CF" />
-          <Text style={{ marginTop: 10, color: '#6E56CF', fontWeight: '600' }}>
-            Loading Pokémon…
-          </Text>
-        </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <ScrollView>
+          <SkeletonHero />
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              marginTop: 80,
+              paddingTop: 24,
+            }}
+          >
+            <SkeletonTabs />
+            <SkeletonAboutCard />
+            <SkeletonStatsCard />
+            <SkeletonEvolutionList />
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
+  // ERROR
   if (error || !pokemon) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
@@ -78,29 +107,26 @@ export default function PokemonDetailScreen() {
     );
   }
 
+  // NORMAL
+  const artworkUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <ScrollView>
         {/* ==== Hero blauw ==== */}
         <View style={styles.hero}>
-          {/* Vorige + Hartje */}
+          {/* Vorige + Favorite (DB + haptics) */}
           <View style={styles.customHeaderRow}>
             <Pressable style={styles.backBtn} onPress={() => router.back()}>
               <Text style={styles.backIcon}>‹</Text>
               <Text style={styles.backText}>Vorige</Text>
             </Pressable>
-            <Pressable
-              style={styles.heartBtn}
-              onPress={() => setFav((v) => !v)}
-              accessibilityLabel="Toggle favorite"
-              hitSlop={10}
-            >
-              <IconSymbol
-                name={fav ? 'heart.fill' : 'heart'}
-                size={22}
-                color={fav ? '#6E56CF' : '#0B1026'}
-              />
-            </Pressable>
+
+            <Favorite
+              pokemonId={pokemon.id}
+              pokemonName={pokemon.name}
+              imageUrl={artworkUrl}
+            />
           </View>
 
           {/* Titel + ID */}
@@ -119,7 +145,9 @@ export default function PokemonDetailScreen() {
               return (
                 <View key={type.name} style={styles.typeChip}>
                   <View style={[styles.typeDot, { backgroundColor: dot }]} />
-                  <Text style={styles.typeChipLabel}>{capitalize(type.name)}</Text>
+                  <Text style={styles.typeChipLabel}>
+                    {capitalize(type.name)}
+                  </Text>
                 </View>
               );
             })}
@@ -202,43 +230,47 @@ export default function PokemonDetailScreen() {
 
           {/* Evolution – Pikachu stijl */}
           {tab === 'evolution' && (
-            <View style={styles.card}>
-              {evoSteps.map((step, idx) => {
-                const id3 = String(step.id).padStart(3, '0');
-                const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
-                const isLast = idx === evoSteps.length - 1;
+            isEvoLoading ? (
+              <SkeletonEvolutionList />
+            ) : (
+              <View style={styles.card}>
+                {evoSteps.map((step, idx) => {
+                  const id3 = String(step.id).padStart(3, '0');
+                  const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
+                  const isLast = idx === evoSteps.length - 1;
 
-                return (
-                  <View key={step.id}>
-                    <View style={styles.evoRow}>
-                      {/* Grijze kolom die top/onder/links raakt */}
-                      <View style={styles.evoImgBox}>
-                        <Image source={{ uri: img }} style={styles.evoImg} />
-                      </View>
-
-                      {/* Rechter wit gedeelte */}
-                      <View style={styles.evoRight}>
-                        <View style={styles.evoIdBadge}>
-                          <Text style={styles.evoIdText}>{id3}</Text>
+                  return (
+                    <View key={step.id}>
+                      <View style={styles.evoRow}>
+                        {/* Grijze kolom die top/onder/links raakt */}
+                        <View style={styles.evoImgBox}>
+                          <Image source={{ uri: img }} style={styles.evoImg} />
                         </View>
-                        <Text style={styles.evoName}>{capitalize(step.name)}</Text>
+
+                        {/* Rechter wit gedeelte */}
+                        <View style={styles.evoRight}>
+                          <View style={styles.evoIdBadge}>
+                            <Text style={styles.evoIdText}>{id3}</Text>
+                          </View>
+                          <Text style={styles.evoName}>{capitalize(step.name)}</Text>
+                        </View>
                       </View>
+
+                      {/* Dots onder de image-kolom */}
+                      {!isLast && (
+                        <View style={styles.dotsWrap}>
+                          <View style={styles.dotsCol}>
+                            <View style={styles.dot} />
+                            <View style={styles.dot} />
+                            <View style={styles.dot} />
+                          </View>
+                        </View>
+                      )}
                     </View>
-
-                    {/* Dots onder de image-kolom (niet in het midden van de kaart) */}
-                    {!isLast && (
-                      <View style={styles.dotsWrap}>
-                        <View style={styles.dotsCol}>
-                          <View style={styles.dot} />
-                          <View style={styles.dot} />
-                          <View style={styles.dot} />
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            )
           )}
         </View>
       </ScrollView>
@@ -289,7 +321,6 @@ const styles = StyleSheet.create({
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6 },
   backIcon: { fontSize: 22, color: '#0B1026', lineHeight: 22 },
   backText: { fontSize: 16, fontWeight: '800', color: '#0B1026' },
-  heartBtn: { padding: 6 },
 
   titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   title: { fontSize: 44, fontWeight: '900', color: '#0B1026', maxWidth: '70%' },
@@ -371,7 +402,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 20,
-    overflow: 'hidden', // zodat grijze kolom de randen vult
+    overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     shadowColor: '#1D1D1D',
     shadowOpacity: 0.04,
@@ -382,8 +413,8 @@ const styles = StyleSheet.create({
   },
   evoImgBox: {
     width: EV_IMG_BOX_W,
-    alignSelf: 'stretch',        // → vult top & bottom van de kaart
-    backgroundColor: '#F3F4F6',  // grijs vlak
+    alignSelf: 'stretch',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -407,22 +438,7 @@ const styles = StyleSheet.create({
   evoName: { fontSize: 22, fontWeight: '900', color: '#0B1026' },
 
   // Dots onder de image-kolom
-  dotsWrap: {
-    height: 28,
-    marginTop: -6, // optisch dichter bij de kaart
-    marginBottom: 8,
-  },
-  dotsCol: {
-    marginLeft: 18,                  // uitlijning ~ midden van de image
-    width: EV_IMG_BOX_W,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#D1D5DB',
-    marginVertical: 4,
-  },
+  dotsWrap: { height: 28, marginTop: -6, marginBottom: 8 },
+  dotsCol: { marginLeft: 18, width: EV_IMG_BOX_W, alignItems: 'center', justifyContent: 'flex-start' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB', marginVertical: 4 },
 });
