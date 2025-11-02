@@ -3,9 +3,10 @@ import Favorite from '@/components/ui/favorite';
 import { PokemonImage } from '@/components/ui/pokemon-image';
 import { useEvolutionChainByName, usePokemonByName } from '@/hooks/use-pokemon';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     Image,
+    LayoutChangeEvent,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -24,10 +25,7 @@ import {
 } from '@/components/ui/Skeleton';
 
 // Swipeable tabs
-import type {
-    NavigationState,
-    SceneRendererProps
-} from 'react-native-tab-view';
+import type { NavigationState, SceneRendererProps } from 'react-native-tab-view';
 import { SceneMap, TabBar, TabView } from 'react-native-tab-view';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -52,31 +50,28 @@ function MyTabBar(
   props: SceneRendererProps & { navigationState: NavigationState<Route> }
 ) {
   const TB = TabBar as unknown as React.ComponentType<any>;
+  const H_PADDING = 20; // zelfde als contentContainerStyle
+  const innerWidth = Math.max(0, props.layout.width - H_PADDING * 2);
+
   return (
     <TB
       {...props}
       style={{ backgroundColor: 'transparent', elevation: 0 }}
-      contentContainerStyle={{ paddingHorizontal: 20 }}
+      contentContainerStyle={{ paddingHorizontal: H_PADDING }}
       indicatorStyle={styles.tabsIndicator}
       pressColor="transparent"
-      tabStyle={{ width: props.layout.width / 3 }}
+      // Breedte per tab = (totale breedte - padding*2) / 3
+      tabStyle={{ width: innerWidth / 3 }}
       activeColor="#0B1026"
       inactiveColor="#727B88"
-      renderLabel={({
-        route,
-        focused,
-      }: {
-        route: Route;
-        focused: boolean;
-        color: string;
-      }) => (
-        <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
-          {route.title}
-        </Text>
+      renderLabel={({ route, focused }: { route: Route; focused: boolean; color: string }) => (
+        <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{route.title}</Text>
       )}
+      scrollEnabled={false}
     />
   );
 }
+
 
 export default function PokemonDetailScreen() {
   const layout = useWindowDimensions();
@@ -93,6 +88,24 @@ export default function PokemonDetailScreen() {
     { key: 'stats', title: 'Stats' },
     { key: 'evolution', title: 'Evolution' },
   ];
+
+  // Dynamische hoogte per tab-scene zodat de OUTER ScrollView scrolt
+  const [sceneHeights, setSceneHeights] = useState<Record<Route['key'], number>>({
+    about: 0,
+    stats: 0,
+    evolution: 0,
+  });
+
+  const handleLayoutFor =
+    (key: Route['key']) =>
+    (e: LayoutChangeEvent) => {
+      const h = e.nativeEvent.layout.height;
+      setSceneHeights((prev) => (prev[key] === h ? prev : { ...prev, [key]: h }));
+    };
+
+  const activeKey = routes[index].key;
+  // Extra buffer zodat langere evolution-lijsten niet afkappen
+  const tabViewHeight = Math.max(sceneHeights[activeKey] || 0, 1) + 120;
 
   const prettyId = useMemo(
     () => (pokemon ? `#${String(pokemon.id).padStart(3, '0')}` : ''),
@@ -115,8 +128,9 @@ export default function PokemonDetailScreen() {
   /* ---------- Loading ---------- */
   if (isPokemonLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <ScrollView>
+      // Zelfde blauwe achtergrond als hero → één blauwe balk (geen dubbele)
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
+        <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: '#E9F2F8' }}>
           <SkeletonHero />
           <View
             style={{
@@ -150,85 +164,102 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  /* ---------- Scenes ---------- */
-  const AboutScene = () => (
-    <View style={styles.card}>
-      <InfoRow label="Name" value={capitalize(pokemon.name)} />
-      <InfoRow label="ID" value={String(pokemon.id).padStart(3, '0')} />
-      <InfoRow label="Base Exp" value={String(pokemon.base_experience ?? '—')} />
-      <InfoRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
-      <InfoRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
-      <InfoRow label="Types" value={typesLine} />
-      <InfoRow label="Abilities" value={abilities} />
-    </View>
+  /* ---------- Scenes: GEEN ScrollView hier! We meten de hoogte met onLayout ---------- */
+  const AboutScene = useCallback(
+    () => (
+      <View onLayout={handleLayoutFor('about')}>
+        <View style={styles.card}>
+          <InfoRow label="Name" value={capitalize(pokemon.name)} />
+          <InfoRow label="ID" value={String(pokemon.id).padStart(3, '0')} />
+          <InfoRow label="Base Exp" value={String(pokemon.base_experience ?? '—')} />
+          <InfoRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
+          <InfoRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
+          <InfoRow label="Types" value={typesLine} />
+          <InfoRow label="Abilities" value={abilities} />
+        </View>
+      </View>
+    ),
+    [pokemon, abilities, typesLine]
   );
 
-  const StatsScene = () => (
-    <View style={styles.card}>
-      {pokemon.stats.map(s => {
-        const map: Record<string, string> = {
-          hp: 'HP',
-          attack: 'Attack',
-          defense: 'Defense',
-          'special-attack': 'Special Attack',
-          'special-defense': 'Special Defense',
-          speed: 'Speed',
-        };
-        const label = map[s.stat.name] ?? s.stat.name;
-        const val = s.base_stat;
-        const widthPct = Math.min(100, Math.max(0, (val / 180) * 100));
-        return (
-          <View key={s.stat.name} style={{ marginBottom: 16 }}>
-            <View style={styles.statHeader}>
-              <Text style={styles.statName}>{label}</Text>
-              <Text style={styles.statValue}>{val}</Text>
-            </View>
-            <View style={styles.statBarBg}>
-              <View style={[styles.statBarFill, { width: `${widthPct}%` }]} />
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-
-  const EvolutionScene = () =>
-    isEvoLoading ? (
-      <SkeletonEvolutionList />
-    ) : (
-      <View style={styles.card}>
-        {evoSteps.map((step, idx) => {
-          const id3 = String(step.id).padStart(3, '0');
-          const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
-          const isLast = idx === evoSteps.length - 1;
-
-          return (
-            <View key={step.id}>
-              <View style={styles.evoRow}>
-                <View style={styles.evoImgBox}>
-                  <Image source={{ uri: img }} style={styles.evoImg} />
+  const StatsScene = useCallback(
+    () => (
+      <View onLayout={handleLayoutFor('stats')}>
+        <View style={styles.card}>
+          {pokemon.stats.map(s => {
+            const map: Record<string, string> = {
+              hp: 'HP',
+              attack: 'Attack',
+              defense: 'Defense',
+              'special-attack': 'Special Attack',
+              'special-defense': 'Special Defense',
+              speed: 'Speed',
+            };
+            const label = map[s.stat.name] ?? s.stat.name;
+            const val = s.base_stat;
+            const widthPct = Math.min(100, Math.max(0, (val / 180) * 100));
+            return (
+              <View key={s.stat.name} style={{ marginBottom: 16 }}>
+                <View style={styles.statHeader}>
+                  <Text style={styles.statName}>{label}</Text>
+                  <Text style={styles.statValue}>{val}</Text>
                 </View>
-                <View style={styles.evoRight}>
-                  <View style={styles.evoIdBadge}>
-                    <Text style={styles.evoIdText}>{id3}</Text>
-                  </View>
-                  <Text style={styles.evoName}>{capitalize(step.name)}</Text>
+                <View style={styles.statBarBg}>
+                  <View style={[styles.statBarFill, { width: `${widthPct}%` }]} />
                 </View>
               </View>
-              {!isLast && (
-                <View style={styles.dotsWrap}>
-                  <View style={styles.dotsCol}>
-                    <View style={styles.dot} />
-                    <View style={styles.dot} />
-                    <View style={styles.dot} />
-                  </View>
-                </View>
-              )}
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
-    );
+    ),
+    [pokemon]
+  );
+
+  const EvolutionScene = useCallback(
+    () =>
+      isEvoLoading ? (
+        <View onLayout={handleLayoutFor('evolution')}>
+          <SkeletonEvolutionList />
+        </View>
+      ) : (
+        <View onLayout={handleLayoutFor('evolution')}>
+          <View style={styles.card}>
+            {evoSteps.map((step, idx) => {
+              const id3 = String(step.id).padStart(3, '0');
+              const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
+              const isLast = idx === evoSteps.length - 1;
+
+              return (
+                <View key={step.id}>
+                  <View style={styles.evoRow}>
+                    <View style={styles.evoImgBox}>
+                      <Image source={{ uri: img }} style={styles.evoImg} />
+                    </View>
+                    <View style={styles.evoRight}>
+                      <View style={styles.evoIdBadge}>
+                        <Text style={styles.evoIdText}>{id3}</Text>
+                      </View>
+                      <Text style={styles.evoName}>{capitalize(step.name)}</Text>
+                    </View>
+                  </View>
+                  {!isLast && (
+                    <View style={styles.dotsWrap}>
+                      <View style={styles.dotsCol}>
+                        <View style={styles.dot} />
+                        <View style={styles.dot} />
+                        <View style={styles.dot} />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ),
+    [evoSteps, isEvoLoading]
+  );
 
   const renderScene = SceneMap({
     about: AboutScene,
@@ -239,8 +270,13 @@ export default function PokemonDetailScreen() {
   const artworkUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 0 }} bounces={false} showsVerticalScrollIndicator={false}>
+    // Zelfde blauwe achtergrond als hero → statusbar + banner één geheel
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: '#E9F2F8' }}
+      >
         {/* ==== Hero ==== */}
         <View style={styles.hero}>
           <View style={styles.customHeaderRow}>
@@ -252,7 +288,9 @@ export default function PokemonDetailScreen() {
           </View>
 
           <View style={styles.titleRow}>
-            <Text numberOfLines={1} style={styles.title}>{capitalize(pokemon.name)}</Text>
+            <Text numberOfLines={1} style={styles.title}>
+              {capitalize(pokemon.name)}
+            </Text>
             <Text style={styles.idText}>{prettyId}</Text>
           </View>
 
@@ -274,16 +312,19 @@ export default function PokemonDetailScreen() {
           </View>
         </View>
 
-        {/* ==== Tabs (swipeable) ==== */}
+        {/* ==== Tabs (niet-scrollend; hoogte volgt actieve scene) ==== */}
         <View style={styles.sheet}>
           <TabView<Route>
             navigationState={{ index, routes }}
             renderScene={renderScene}
             onIndexChange={setIndex}
             initialLayout={{ width: layout.width }}
+            lazy
             renderTabBar={(props: SceneRendererProps & { navigationState: NavigationState<Route> }) => (
               <MyTabBar {...props} />
             )}
+            // vaste hoogte + buffer zodat content niet afkapt
+            style={{ height: tabViewHeight }}
           />
         </View>
       </ScrollView>
