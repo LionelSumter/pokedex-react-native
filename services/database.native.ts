@@ -1,4 +1,3 @@
-// services/database.native.ts
 import * as SQLite from 'expo-sqlite';
 
 export interface FavoritePokemon {
@@ -29,7 +28,7 @@ class DatabaseServiceNative {
     this.ready = true;
   }
 
-  private ensure() {
+  private ensure(): void {
     if (!this.db || !this.ready) throw new Error('Database not initialized');
   }
 

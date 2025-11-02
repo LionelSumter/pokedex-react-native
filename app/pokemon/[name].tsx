@@ -3,7 +3,7 @@ import Favorite from '@/components/ui/favorite';
 import { PokemonImage } from '@/components/ui/pokemon-image';
 import { useEvolutionChainByName, usePokemonByName } from '@/hooks/use-pokemon';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
     Image,
     LayoutChangeEvent,
@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Skeletons
 import {
     SkeletonAboutCard,
     SkeletonEvolutionList,
@@ -24,9 +23,7 @@ import {
     SkeletonStatsCard,
 } from '@/components/ui/Skeleton';
 
-// Swipeable tabs
-import type { NavigationState, SceneRendererProps } from 'react-native-tab-view';
-import { SceneMap, TabBar, TabView } from 'react-native-tab-view';
+import { SceneMap, TabView } from 'react-native-tab-view';
 
 const TYPE_COLORS: Record<string, string> = {
   normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
@@ -39,49 +36,15 @@ const TYPE_COLORS: Record<string, string> = {
 const HERO_H = 420;
 const EV_IMG_BOX_W = 96;
 
-// eenvoudige route-type
-type Route = {
-  key: 'about' | 'stats' | 'evolution';
-  title: 'About' | 'Stats' | 'Evolution';
-};
-
-/** Typed wrapper zodat TS niet zeurt over TabBar props (éénmalige cast). */
-function MyTabBar(
-  props: SceneRendererProps & { navigationState: NavigationState<Route> }
-) {
-  const TB = TabBar as unknown as React.ComponentType<any>;
-  const H_PADDING = 20; // zelfde als contentContainerStyle
-  const innerWidth = Math.max(0, props.layout.width - H_PADDING * 2);
-
-  return (
-    <TB
-      {...props}
-      style={{ backgroundColor: 'transparent', elevation: 0 }}
-      contentContainerStyle={{ paddingHorizontal: H_PADDING }}
-      indicatorStyle={styles.tabsIndicator}
-      pressColor="transparent"
-      // Breedte per tab = (totale breedte - padding*2) / 3
-      tabStyle={{ width: innerWidth / 3 }}
-      activeColor="#0B1026"
-      inactiveColor="#727B88"
-      renderLabel={({ route, focused }: { route: Route; focused: boolean; color: string }) => (
-        <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{route.title}</Text>
-      )}
-      scrollEnabled={false}
-    />
-  );
-}
-
+type Route = { key: 'about' | 'stats' | 'evolution'; title: 'About' | 'Stats' | 'Evolution' };
 
 export default function PokemonDetailScreen() {
   const layout = useWindowDimensions();
   const { name } = useLocalSearchParams<{ name: string }>();
 
-  // Data
   const { data: pokemon, isLoading: isPokemonLoading, error } = usePokemonByName(name ?? '');
   const { steps: evoSteps, isLoading: isEvoLoading } = useEvolutionChainByName(name ?? '');
 
-  // Tab state
   const [index, setIndex] = useState(0);
   const routes: Route[] = [
     { key: 'about', title: 'About' },
@@ -89,7 +52,6 @@ export default function PokemonDetailScreen() {
     { key: 'evolution', title: 'Evolution' },
   ];
 
-  // Dynamische hoogte per tab-scene zodat de OUTER ScrollView scrolt
   const [sceneHeights, setSceneHeights] = useState<Record<Route['key'], number>>({
     about: 0,
     stats: 0,
@@ -103,8 +65,8 @@ export default function PokemonDetailScreen() {
       setSceneHeights((prev) => (prev[key] === h ? prev : { ...prev, [key]: h }));
     };
 
-  const activeKey = routes[index].key;
-  // Extra buffer zodat langere evolution-lijsten niet afkappen
+  const safeIndex = Math.min(Math.max(0, index), Math.max(0, routes.length - 1));
+  const activeKey = routes[safeIndex]!.key;
   const tabViewHeight = Math.max(sceneHeights[activeKey] || 0, 1) + 120;
 
   const prettyId = useMemo(
@@ -115,20 +77,19 @@ export default function PokemonDetailScreen() {
   const abilities = useMemo(() => {
     if (!pokemon) return '';
     return pokemon.abilities
-      .map(a => a.ability.name.replace(/-/g, ' '))
+      .map((a) => a.ability.name.replace(/-/g, ' '))
       .map(capitalize)
       .join(', ');
   }, [pokemon]);
 
   const typesLine = useMemo(() => {
     if (!pokemon) return '';
-    return pokemon.types.map(t => capitalize(t.type.name)).join(', ');
+    return pokemon.types.map((t) => capitalize(t.type.name)).join(', ');
   }, [pokemon]);
 
-  /* ---------- Loading ---------- */
+  // Loading
   if (isPokemonLoading) {
     return (
-      // Zelfde blauwe achtergrond als hero → één blauwe balk (geen dubbele)
       <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
         <ScrollView showsVerticalScrollIndicator={false} style={{ backgroundColor: '#E9F2F8' }}>
           <SkeletonHero />
@@ -150,7 +111,7 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  /* ---------- Error ---------- */
+  // Error
   if (error || !pokemon) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
@@ -164,7 +125,7 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  /* ---------- Scenes: GEEN ScrollView hier! We meten de hoogte met onLayout ---------- */
+  // Scenes
   const AboutScene = useCallback(
     () => (
       <View onLayout={handleLayoutFor('about')}>
@@ -186,7 +147,7 @@ export default function PokemonDetailScreen() {
     () => (
       <View onLayout={handleLayoutFor('stats')}>
         <View style={styles.card}>
-          {pokemon.stats.map(s => {
+          {pokemon.stats.map((s) => {
             const map: Record<string, string> = {
               hp: 'HP',
               attack: 'Attack',
@@ -270,7 +231,6 @@ export default function PokemonDetailScreen() {
   const artworkUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
 
   return (
-    // Zelfde blauwe achtergrond als hero → statusbar + banner één geheel
     <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -287,7 +247,7 @@ export default function PokemonDetailScreen() {
             <Favorite pokemonId={pokemon.id} pokemonName={pokemon.name} imageUrl={artworkUrl} />
           </View>
 
-          <View style={styles.titleRow}>
+        <View style={styles.titleRow}>
             <Text numberOfLines={1} style={styles.title}>
               {capitalize(pokemon.name)}
             </Text>
@@ -312,23 +272,52 @@ export default function PokemonDetailScreen() {
           </View>
         </View>
 
-        {/* ==== Tabs (niet-scrollend; hoogte volgt actieve scene) ==== */}
+        {/* ==== Tabs: eigen header, default TabBar uit ==== */}
         <View style={styles.sheet}>
+          <TabsHeader routes={routes} index={index} onChangeIndex={setIndex} />
+
           <TabView<Route>
             navigationState={{ index, routes }}
             renderScene={renderScene}
             onIndexChange={setIndex}
             initialLayout={{ width: layout.width }}
             lazy
-            renderTabBar={(props: SceneRendererProps & { navigationState: NavigationState<Route> }) => (
-              <MyTabBar {...props} />
-            )}
-            // vaste hoogte + buffer zodat content niet afkapt
+            renderTabBar={() => null}   // 🔥 verberg standaard TabBar
             style={{ height: tabViewHeight }}
           />
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function TabsHeader({
+  routes,
+  index,
+  onChangeIndex,
+}: {
+  routes: Route[];
+  index: number;
+  onChangeIndex: (i: number) => void;
+}) {
+  return (
+    <View style={styles.tabsHeader}>
+      {routes.map((r, i) => {
+        const focused = i === index;
+        return (
+          <Pressable
+            key={r.key}
+            onPress={() => onChangeIndex(i)}
+            style={[styles.tabBtn, focused && styles.tabBtnActive]}
+          >
+            <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+              {r.title}
+            </Text>
+            {focused && <View style={styles.tabsIndicator} />}
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -400,10 +389,22 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
 
-  // Tabbar look
-  tabLabel: { fontSize: 24, fontWeight: '800', color: '#727B88', textTransform: 'none' },
+  // Custom Tabs Header
+  tabsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  tabBtnActive: {},
+  tabLabel: { fontSize: 18, fontWeight: '800', textTransform: 'none', color: '#727B88' },
   tabLabelActive: { color: '#0B1026' },
-  tabsIndicator: { height: 3, backgroundColor: '#6E56CF', borderRadius: 2 },
+  tabsIndicator: { marginTop: 6, height: 3, width: 36, borderRadius: 2, backgroundColor: '#6E56CF' },
 
   card: {
     marginHorizontal: 20,

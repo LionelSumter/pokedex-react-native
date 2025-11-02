@@ -17,11 +17,13 @@ export default function Favorite({ pokemonId, pokemonName, imageUrl }: FavoriteP
   const handleToggle = async () => {
     try {
       await Haptics.selectionAsync(); // kleine haptic
-    } catch {}
+    } catch {
+      // haptics niet beschikbaar → stil falen
+    }
     toggle.mutate({
       pokemonId,
       name: pokemonName,
-      imageUrl,
+      imageUrl: imageUrl ?? '',
       isCurrentlyFavorite: !!isFav,
     });
   };

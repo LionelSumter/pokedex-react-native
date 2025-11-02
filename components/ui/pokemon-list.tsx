@@ -91,18 +91,16 @@ function Card({ item }: { item: PokemonListItem }) {
           <Text style={styles.idText}>#{id3}</Text>
         </View>
 
-        {/* ✅ stopPropagation fix zodat het menu opent */}
-        <Pressable
-          hitSlop={12}
+        {/* Responder API: voorkomt bubbling naar parent, geen ts-ignore nodig */}
+        <View
+          accessibilityRole="button"
           style={styles.kebabBtn}
-          onPress={(e) => {
-            // @ts-ignore — compat tussen RN versies
-            if (e?.stopPropagation) e.stopPropagation();
-            openMenu();
-          }}
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={openMenu}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="ellipsis-vertical" size={18} color="#6B7280" />
-        </Pressable>
+        </View>
       </View>
 
       {/* image */}
@@ -110,7 +108,7 @@ function Card({ item }: { item: PokemonListItem }) {
         <Image source={{ uri: image }} style={styles.image} />
       </View>
 
-      {/* name (en eventueel type als je die aanlevert) */}
+      {/* name (en eventueel type) */}
       <Text style={styles.name}>{item.name}</Text>
       {!!item.type && <Text style={styles.typeText}>{item.type}</Text>}
     </Pressable>
@@ -129,9 +127,7 @@ export default function PokemonList({ data, contentPadding = 16 }: Props) {
         { paddingHorizontal: contentPadding },
       ]}
       renderItem={({ item }) => <Card item={item} />}
-      ListEmptyComponent={
-        <Text style={styles.empty}>Geen Pokémon gevonden…</Text>
-      }
+      ListEmptyComponent={<Text style={styles.empty}>Geen Pokémon gevonden…</Text>}
       showsVerticalScrollIndicator={false}
     />
   );
@@ -168,7 +164,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
-  idText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12, letterSpacing: 0.3 },
+  idText: {
+    color: '#FFFFFF',
+    fontFamily: 'Rubik_700Bold',
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
 
   kebabBtn: {
     width: 28,
@@ -190,16 +191,21 @@ const styles = StyleSheet.create({
 
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Rubik_700Bold',
     color: '#111827',
     textTransform: 'capitalize',
   },
-  typeText: { color: '#6B7280', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  typeText: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontFamily: 'Rubik_500Medium',
+    marginTop: 2,
+  },
 
   empty: {
     padding: 16,
     textAlign: 'center',
     color: '#DC0A2D',
-    fontWeight: '700',
+    fontFamily: 'Rubik_700Bold',
   },
 });

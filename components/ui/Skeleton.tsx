@@ -1,4 +1,3 @@
-// components/ui/Skeleton.tsx
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
 
@@ -24,7 +23,7 @@ export function SkeletonBox({
   style,
 }: {
   height: number;
-  width?: number | `${number}%` | 'auto';
+  width?: number | string; // ← geen 'as const' nodig
   radius?: number;
   style?: ViewStyle;
 }) {
@@ -35,7 +34,7 @@ export function SkeletonBox({
         styles.box,
         {
           height,
-          width: width ?? ('100%' as const),
+          width: width ?? '100%',
           borderRadius: radius,
           opacity,
         },
@@ -46,10 +45,10 @@ export function SkeletonBox({
 }
 
 export function SkeletonLine({
-  width = '100%' as const,
+  width = '100%',
   height = 14,
 }: {
-  width?: number | `${number}%` | 'auto';
+  width?: number | string; // ← geen 'as const' nodig
   height?: number;
 }) {
   return <SkeletonBox width={width} height={height} radius={6} style={{ marginVertical: 6 }} />;
@@ -62,7 +61,7 @@ export function SkeletonHero() {
     <View style={styles.hero}>
       <SkeletonLine width={120} height={16} />
       <View style={{ height: 12 }} />
-      <SkeletonLine width={'60%' as const} height={40} />
+      <SkeletonLine width="60%" height={40} />
       <View style={{ height: 8 }} />
       <SkeletonLine width={70} height={22} />
       <View style={{ height: 16 }} />
@@ -87,7 +86,7 @@ export function SkeletonTabs() {
         <SkeletonLine width={60} height={18} />
         <SkeletonLine width={100} height={18} />
       </View>
-      <SkeletonBox width={'100%' as const} height={2} radius={2} />
+      <SkeletonBox width="100%" height={2} radius={2} />
     </View>
   );
 }
@@ -114,7 +113,7 @@ export function SkeletonStatsCard() {
             <SkeletonLine width={120} />
             <SkeletonLine width={40} />
           </View>
-          <SkeletonBox width={'100%' as const} height={10} radius={999} />
+          <SkeletonBox width="100%" height={10} radius={999} />
         </View>
       ))}
     </View>

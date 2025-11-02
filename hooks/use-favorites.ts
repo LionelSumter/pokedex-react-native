@@ -1,4 +1,4 @@
-import { databaseService } from '@/services/database.native';
+import { databaseService } from '@/services/database';
 import { PokeApiService } from '@/services/pokemon-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
@@ -6,14 +6,14 @@ import * as Haptics from 'expo-haptics';
 export const favoritesKeys = {
   all: ['favorites'] as const,
   one: (id: number) => ['is-favorite', id] as const,
-  stats: ['favorite-stats'] as const,
+  stats: ['favorite-stats'] as const
 };
 
 export const useFavorites = () => {
   return useQuery({
     queryKey: favoritesKeys.all,
     queryFn: () => databaseService.getAllFavorites(),
-    staleTime: 0,
+    staleTime: 0
   });
 };
 
@@ -22,22 +22,26 @@ export const useIsFavorite = (pokemonId: number | undefined) => {
     queryKey: favoritesKeys.one(pokemonId ?? -1),
     queryFn: () => (pokemonId ? databaseService.isFavorite(pokemonId) : false),
     enabled: !!pokemonId,
-    staleTime: 0,
+    staleTime: 0
   });
+};
+
+type ToggleVars = {
+  pokemonId: number;
+  name: string;
+  imageUrl?: string;
+  isCurrentlyFavorite: boolean;
 };
 
 export const useToggleFavorite = () => {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (vars: {
-      pokemonId: number;
-      name: string;
-      imageUrl?: string;
-      isCurrentlyFavorite: boolean;
-    }) => {
+  return useMutation<void, Error, ToggleVars>({
+    mutationFn: async (vars) => {
       try {
         await Haptics.selectionAsync();
-      } catch {}
+      } catch {
+        // haptics optioneel
+      }
       if (vars.isCurrentlyFavorite) {
         await databaseService.removeFavorite(vars.pokemonId);
       } else {
@@ -48,7 +52,7 @@ export const useToggleFavorite = () => {
       qc.invalidateQueries({ queryKey: favoritesKeys.all });
       qc.invalidateQueries({ queryKey: favoritesKeys.one(vars.pokemonId) });
       qc.invalidateQueries({ queryKey: favoritesKeys.stats });
-    },
+    }
   });
 };
 
@@ -62,6 +66,7 @@ export const useFavoriteStats = () => {
       const details = await Promise.allSettled(
         subset.map((f) => PokeApiService.getPokemonById(f.id))
       );
+
       const ok = details
         .filter(
           (r): r is PromiseFulfilledResult<
@@ -78,9 +83,9 @@ export const useFavoriteStats = () => {
         count,
         avgBaseExp: avg(ok.map((p) => p.base_experience ?? 0)),
         avgWeightKg: avg(ok.map((p) => (p.weight ?? 0) / 10)),
-        avgHeightM: avg(ok.map((p) => (p.height ?? 0) / 10)),
+        avgHeightM: avg(ok.map((p) => (p.height ?? 0) / 10))
       };
     },
-    staleTime: 0,
+    staleTime: 0
   });
 };
