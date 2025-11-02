@@ -5,7 +5,7 @@ import { EvolutionClient, PokemonClient } from 'pokenode-ts';
 export const PokeApiService = new PokemonClient();
 export const EvoApiService = new EvolutionClient();
 
-/** Hulpfuncties */
+/** Helpers */
 export function getPokemonIdFromUrl(url: string): string | null {
   if (!url) return null;
   const match = url.match(/\/pokemon\/(\d+)\/?$/);

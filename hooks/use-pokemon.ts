@@ -1,9 +1,9 @@
 // hooks/use-pokemon.ts
 import { EvoApiService, PokeApiService } from '@/services/pokemon-api';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import type { ChainLink, EvolutionChain, NamedAPIResource } from 'pokenode-ts';
+import type { ChainLink, EvolutionChain, NamedAPIResource, Pokemon } from 'pokenode-ts';
 
-// ---------- Types & helpers ----------
+/* ---------- Types & helpers ---------- */
 export type PokemonWithId = NamedAPIResource & { id: string };
 
 export function getPokemonIdFromUrl(url: string): string | null {
@@ -17,11 +17,12 @@ const mapWithResourceId = (r: NamedAPIResource): PokemonWithId => {
   return { id, ...r };
 };
 
-// ---------- Lijst ----------
+/* ---------- Eenvoudige (paged) lijst ---------- */
 export const usePokemonList = (limit: number = 20, offset: number = 0) => {
   return useQuery<PokemonWithId[]>({
     queryKey: ['pokemon-list', limit, offset],
     queryFn: async () => {
+      // pokenode-ts: listPokemons(offset, limit)
       const res = await PokeApiService.listPokemons(offset, limit);
       return res.results.map(mapWithResourceId);
     },
@@ -29,9 +30,9 @@ export const usePokemonList = (limit: number = 20, offset: number = 0) => {
   });
 };
 
-// ---------- Detail (op naam) ----------
+/* ---------- Detail (op naam) ---------- */
 export const usePokemonByName = (name: string) => {
-  return useQuery({
+  return useQuery<Pokemon>({
     queryKey: ['pokemon', name],
     queryFn: () => PokeApiService.getPokemonByName(name),
     enabled: !!name,
@@ -39,19 +40,18 @@ export const usePokemonByName = (name: string) => {
   });
 };
 
-// ---------- BONUS: Infinite scrolling ----------
-export const useInfinitePokemonList = (pageSize: number = 20) => {
+/* ---------- Infinite scrolling (50 per page aanbevolen) ---------- */
+export const useInfinitePokemonList = (pageSize: number = 50) => {
   return useInfiniteQuery({
     queryKey: ['pokemon-infinite', pageSize],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
-      const offset = pageParam ?? 0;
+      const offset = typeof pageParam === 'number' ? pageParam : 0;
       const data = await PokeApiService.listPokemons(offset, pageSize);
       return {
         items: data.results.map(mapWithResourceId),
         count: data.count,
-        nextOffset:
-          offset + pageSize < data.count ? offset + pageSize : undefined,
+        nextOffset: offset + pageSize < data.count ? offset + pageSize : undefined,
       };
     },
     getNextPageParam: (lastPage) => lastPage.nextOffset,
@@ -59,7 +59,7 @@ export const useInfinitePokemonList = (pageSize: number = 20) => {
   });
 };
 
-// ---------- Evolution chain helpers ----------
+/* ---------- Evolution chain ---------- */
 type EvoStep = { id: number; name: string; min_level?: number | null };
 
 function idFromSpeciesUrl(url: string): number {
@@ -77,9 +77,8 @@ function flattenChain(node: ChainLink, acc: EvoStep[] = []): EvoStep[] {
   return acc;
 }
 
-// ---------- Evolution chain op basis van naam ----------
 export function useEvolutionChainByName(name: string) {
-  // 1) species (uit PokemonClient) → bevat evolution_chain url
+  // 1) species → evolution_chain url
   const speciesQuery = useQuery({
     queryKey: ['species', name],
     queryFn: () => PokeApiService.getPokemonSpeciesByName(name),
@@ -90,28 +89,22 @@ export function useEvolutionChainByName(name: string) {
   const chainId =
     speciesQuery.data
       ? Number(
-          speciesQuery.data.evolution_chain.url.match(
-            /evolution-chain\/(\d+)/
-          )?.[1] ?? ''
+          speciesQuery.data.evolution_chain.url.match(/evolution-chain\/(\d+)/)?.[1] ?? ''
         )
       : undefined;
 
-  // 2) evolution chain (uit EvolutionClient)
+  // 2) evolution chain
   const chainQuery = useQuery({
     queryKey: ['evo-chain', chainId],
     queryFn: async () => {
-      const chain: EvolutionChain = await EvoApiService.getEvolutionChainById(
-        chainId!
-      );
+      const chain: EvolutionChain = await EvoApiService.getEvolutionChainById(chainId!);
       return chain;
     },
     enabled: !!chainId,
     staleTime: 10 * 60 * 1000,
   });
 
-  // 3) vlakke lijst van stappen
-  const steps: EvoStep[] =
-    chainQuery.data?.chain ? flattenChain(chainQuery.data.chain) : [];
+  const steps: EvoStep[] = chainQuery.data?.chain ? flattenChain(chainQuery.data.chain) : [];
 
   return {
     steps,

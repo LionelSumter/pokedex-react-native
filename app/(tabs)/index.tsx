@@ -1,3 +1,4 @@
+// app/(tabs)/index.tsx
 import { PokemonWithId, useInfinitePokemonList } from '@/hooks/use-pokemon';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -66,7 +67,7 @@ export default function AllPokemonScreen() {
     );
   }
 
-  // ----- Render -----
+  // ----- Render item -----
   const renderItem = ({ item }: { item: PokemonWithId }) => {
     const idLabel = `#${item.id.padStart(3, '0')}`;
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.id}.png`;
@@ -81,7 +82,9 @@ export default function AllPokemonScreen() {
             <Text style={styles.idText}>{idLabel}</Text>
           </View>
         </View>
+
         <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
+
         <Text numberOfLines={1} style={styles.name}>{item.name}</Text>
       </Pressable>
     );
@@ -89,6 +92,7 @@ export default function AllPokemonScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      {/* Search */}
       <View style={styles.searchWrap}>
         <TextInput
           placeholder="Search for Pokémon..."
