@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
+import type { ViewStyle } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
 function usePulse() {
   const opacity = useRef(new Animated.Value(0.6)).current;

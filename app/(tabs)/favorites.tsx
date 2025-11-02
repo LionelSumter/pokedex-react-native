@@ -1,5 +1,5 @@
 // app/(tabs)/favorites.tsx
-import PokemonList, { PokemonListItem } from '@/components/ui/pokemon-list';
+import PokemonList, { type PokemonListItem } from '@/components/ui/pokemon-list';
 import { useFavorites, useFavoriteStats } from '@/hooks/use-favorites';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

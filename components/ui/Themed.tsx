@@ -1,10 +1,9 @@
 // components/ui/Themed.tsx
 import { darkColors, lightColors } from '@/theme/colors';
+import type { TextProps as RNTextProps, ViewProps as RNViewProps } from 'react-native';
 import {
     Text as RNText,
-    TextProps as RNTextProps,
     View as RNView,
-    ViewProps as RNViewProps,
     StyleSheet,
     useColorScheme,
 } from 'react-native';
@@ -24,7 +23,7 @@ export function useThemeColors() {
 
 /** Themed View */
 export function View({ style, ...rest }: RNViewProps) {
-  const { colors } = useThemeColors();
+  // geen ongebruikte variabelen; kleuren hier niet nodig
   return <RNView style={[{ backgroundColor: 'transparent' }, style]} {...rest} />;
 }
 

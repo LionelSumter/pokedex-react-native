@@ -1,6 +1,6 @@
 // components/ui/error-boundary.tsx
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
-import React from 'react';
+import React, { type ErrorInfo, type PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type FallbackProps = {
@@ -8,22 +8,30 @@ type FallbackProps = {
   onReset: () => void;
 };
 
-class ErrorBoundaryCore extends React.Component<
-  React.PropsWithChildren<{ onReset?: () => void; FallbackComponent: React.ComponentType<FallbackProps> }>,
-  { error: unknown | null }
-> {
-  constructor(props: any) {
-    super(props);
-    this.state = { error: null };
-  }
-  static getDerivedStateFromError(error: unknown) {
+type BoundaryProps = {
+  onReset?: () => void;
+  FallbackComponent: React.ComponentType<FallbackProps>;
+};
+
+type BoundaryState = { error: unknown | null };
+
+class ErrorBoundaryCore extends React.Component<PropsWithChildren<BoundaryProps>, BoundaryState> {
+  override state: BoundaryState = { error: null };
+
+  static getDerivedStateFromError(error: unknown): BoundaryState {
     return { error };
   }
-  reset = () => {
+
+  override componentDidCatch(_error: Error, _info: ErrorInfo): void {
+    // Bewust leeg: geen console logs i.v.m. bonus-eis “no console.*”
+  }
+
+  private reset = () => {
     this.setState({ error: null });
     this.props.onReset?.();
   };
-  render() {
+
+  override render() {
     const { error } = this.state;
     const { children, FallbackComponent } = this.props;
     if (error) return <FallbackComponent error={error} onReset={this.reset} />;
@@ -37,7 +45,7 @@ function DefaultFallback({ error, onReset }: FallbackProps) {
     <View style={styles.box}>
       <Text style={styles.title}>Oops, er ging iets mis</Text>
       <Text style={styles.msg}>{message}</Text>
-      <Pressable onPress={onReset} style={styles.btn}>
+      <Pressable onPress={onReset} style={styles.btn} accessibilityRole="button">
         <Text style={styles.btnText}>Opnieuw proberen</Text>
       </Pressable>
     </View>
@@ -47,7 +55,7 @@ function DefaultFallback({ error, onReset }: FallbackProps) {
 export function QueryAwareErrorBoundary({
   children,
   FallbackComponent = DefaultFallback,
-}: React.PropsWithChildren<{ FallbackComponent?: React.ComponentType<FallbackProps> }>) {
+}: PropsWithChildren<{ FallbackComponent?: React.ComponentType<FallbackProps> }>) {
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (

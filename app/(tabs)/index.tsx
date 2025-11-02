@@ -1,5 +1,6 @@
 // app/(tabs)/index.tsx
-import { PokemonWithId, useInfinitePokemonList } from '@/hooks/use-pokemon';
+import type { PokemonWithId} from '@/hooks/use-pokemon';
+import { useInfinitePokemonList } from '@/hooks/use-pokemon';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {

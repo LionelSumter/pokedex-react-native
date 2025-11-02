@@ -1,6 +1,7 @@
 // components/ui/ThemedText.tsx
 import { fontMap } from '@/theme/fonts';
-import { Text, TextProps } from 'react-native';
+import type { TextProps } from 'react-native';
+import { Text } from 'react-native';
 
 type Weight = 'regular' | 'medium' | 'bold';
 

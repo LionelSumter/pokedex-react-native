@@ -3,10 +3,10 @@ import Favorite from '@/components/ui/favorite';
 import { PokemonImage } from '@/components/ui/pokemon-image';
 import { useEvolutionChainByName, usePokemonByName } from '@/hooks/use-pokemon';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import type { LayoutChangeEvent } from 'react-native';
 import {
     Image,
-    LayoutChangeEvent,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -125,102 +125,93 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  // Scenes
-  const AboutScene = useCallback(
-    () => (
-      <View onLayout={handleLayoutFor('about')}>
-        <View style={styles.card}>
-          <InfoRow label="Name" value={capitalize(pokemon.name)} />
-          <InfoRow label="ID" value={String(pokemon.id).padStart(3, '0')} />
-          <InfoRow label="Base Exp" value={String(pokemon.base_experience ?? '—')} />
-          <InfoRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
-          <InfoRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
-          <InfoRow label="Types" value={typesLine} />
-          <InfoRow label="Abilities" value={abilities} />
-        </View>
+  // Scenes (gewone functies; geen hooks → voldoet aan react-hooks regel)
+  const AboutScene = () => (
+    <View onLayout={handleLayoutFor('about')}>
+      <View style={styles.card}>
+        <InfoRow label="Name" value={capitalize(pokemon.name)} />
+        <InfoRow label="ID" value={String(pokemon.id).padStart(3, '0')} />
+        <InfoRow label="Base Exp" value={String(pokemon.base_experience ?? '—')} />
+        <InfoRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
+        <InfoRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
+        <InfoRow label="Types" value={typesLine} />
+        <InfoRow label="Abilities" value={abilities} />
       </View>
-    ),
-    [pokemon, abilities, typesLine]
+    </View>
   );
 
-  const StatsScene = useCallback(
-    () => (
-      <View onLayout={handleLayoutFor('stats')}>
+  const StatsScene = () => (
+    <View onLayout={handleLayoutFor('stats')}>
+      <View style={styles.card}>
+        {pokemon.stats.map((s) => {
+          const map: Record<string, string> = {
+            hp: 'HP',
+            attack: 'Attack',
+            defense: 'Defense',
+            'special-attack': 'Special Attack',
+            'special-defense': 'Special Defense',
+            speed: 'Speed',
+          };
+          const label = map[s.stat.name] ?? s.stat.name;
+          const val = s.base_stat;
+          const widthPct = Math.min(100, Math.max(0, (val / 180) * 100));
+          return (
+            <View key={s.stat.name} style={{ marginBottom: 16 }}>
+              <View style={styles.statHeader}>
+                <Text style={styles.statName}>{label}</Text>
+                <Text style={styles.statValue}>{val}</Text>
+              </View>
+              <View style={styles.statBarBg}>
+                <View style={[styles.statBarFill, { width: `${widthPct}%` }]} />
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+
+  const EvolutionScene = () =>
+    isEvoLoading ? (
+      <View onLayout={handleLayoutFor('evolution')}>
+        <SkeletonEvolutionList />
+      </View>
+    ) : (
+      <View onLayout={handleLayoutFor('evolution')}>
         <View style={styles.card}>
-          {pokemon.stats.map((s) => {
-            const map: Record<string, string> = {
-              hp: 'HP',
-              attack: 'Attack',
-              defense: 'Defense',
-              'special-attack': 'Special Attack',
-              'special-defense': 'Special Defense',
-              speed: 'Speed',
-            };
-            const label = map[s.stat.name] ?? s.stat.name;
-            const val = s.base_stat;
-            const widthPct = Math.min(100, Math.max(0, (val / 180) * 100));
+          {evoSteps.map((step, idx) => {
+            const id3 = String(step.id).padStart(3, '0');
+            const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
+            const isLast = idx === evoSteps.length - 1;
+
             return (
-              <View key={s.stat.name} style={{ marginBottom: 16 }}>
-                <View style={styles.statHeader}>
-                  <Text style={styles.statName}>{label}</Text>
-                  <Text style={styles.statValue}>{val}</Text>
+              <View key={step.id}>
+                <View style={styles.evoRow}>
+                  <View style={styles.evoImgBox}>
+                    <Image source={{ uri: img }} style={styles.evoImg} />
+                  </View>
+                  <View style={styles.evoRight}>
+                    <View style={styles.evoIdBadge}>
+                      <Text style={styles.evoIdText}>{id3}</Text>
+                    </View>
+                    <Text style={styles.evoName}>{capitalize(step.name)}</Text>
+                  </View>
                 </View>
-                <View style={styles.statBarBg}>
-                  <View style={[styles.statBarFill, { width: `${widthPct}%` }]} />
-                </View>
+                {!isLast && (
+                  <View style={styles.dotsWrap}>
+                    <View style={styles.dotsCol}>
+                      <View style={styles.dot} />
+                      <View style={styles.dot} />
+                      <View style={styles.dot} />
+                    </View>
+                  </View>
+                )}
               </View>
             );
           })}
         </View>
       </View>
-    ),
-    [pokemon]
-  );
-
-  const EvolutionScene = useCallback(
-    () =>
-      isEvoLoading ? (
-        <View onLayout={handleLayoutFor('evolution')}>
-          <SkeletonEvolutionList />
-        </View>
-      ) : (
-        <View onLayout={handleLayoutFor('evolution')}>
-          <View style={styles.card}>
-            {evoSteps.map((step, idx) => {
-              const id3 = String(step.id).padStart(3, '0');
-              const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
-              const isLast = idx === evoSteps.length - 1;
-
-              return (
-                <View key={step.id}>
-                  <View style={styles.evoRow}>
-                    <View style={styles.evoImgBox}>
-                      <Image source={{ uri: img }} style={styles.evoImg} />
-                    </View>
-                    <View style={styles.evoRight}>
-                      <View style={styles.evoIdBadge}>
-                        <Text style={styles.evoIdText}>{id3}</Text>
-                      </View>
-                      <Text style={styles.evoName}>{capitalize(step.name)}</Text>
-                    </View>
-                  </View>
-                  {!isLast && (
-                    <View style={styles.dotsWrap}>
-                      <View style={styles.dotsCol}>
-                        <View style={styles.dot} />
-                        <View style={styles.dot} />
-                        <View style={styles.dot} />
-                      </View>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      ),
-    [evoSteps, isEvoLoading]
-  );
+    );
 
   const renderScene = SceneMap({
     about: AboutScene,
@@ -247,7 +238,7 @@ export default function PokemonDetailScreen() {
             <Favorite pokemonId={pokemon.id} pokemonName={pokemon.name} imageUrl={artworkUrl} />
           </View>
 
-        <View style={styles.titleRow}>
+          <View style={styles.titleRow}>
             <Text numberOfLines={1} style={styles.title}>
               {capitalize(pokemon.name)}
             </Text>
@@ -282,7 +273,7 @@ export default function PokemonDetailScreen() {
             onIndexChange={setIndex}
             initialLayout={{ width: layout.width }}
             lazy
-            renderTabBar={() => null}   // 🔥 verberg standaard TabBar
+            renderTabBar={() => null}   // verberg standaard TabBar
             style={{ height: tabViewHeight }}
           />
         </View>
