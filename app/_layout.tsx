@@ -1,41 +1,47 @@
 // app/_layout.tsx
+import { databaseService } from '@/services/database';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme } from '../hooks/use-color-scheme';
 
-// ⬇️ nieuw
-import { Ionicons } from '@expo/vector-icons';
-import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000, retry: 1 },
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
+      retry: 1,
+    },
   },
 });
 
 export const unstable_settings = { anchor: '(tabs)' };
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-
-  // ⬇️ preload Ionicons font (lost “rondje”-probleem op web)
-  const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
-  });
+  const [dbReady, setDbReady] = useState(Platform.OS === 'web'); // web heeft geen init nodig
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    let mounted = true;
+    (async () => {
+      if (Platform.OS !== 'web') {
+        try {
+          await databaseService.initDatabase();
+        } catch (e) {
+          console.warn('DB init failed', e);
+        }
+      }
+      if (mounted) setDbReady(true);
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-  if (!fontsLoaded) {
-    // niets renderen totdat de icon-fonts geladen zijn
+  if (!dbReady) {
+    // heel klein placeholdertje; je kunt hier ook je Skeleton zetten
     return null;
   }
 

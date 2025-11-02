@@ -15,9 +15,8 @@ export default function Favorite({ pokemonId, pokemonName, imageUrl }: FavoriteP
   const toggle = useToggleFavorite();
 
   const handleToggle = async () => {
-    // lichte haptic feedback (bonus)
     try {
-      await Haptics.selectionAsync();
+      await Haptics.selectionAsync(); // kleine haptic
     } catch {}
     toggle.mutate({
       pokemonId,
@@ -35,7 +34,7 @@ export default function Favorite({ pokemonId, pokemonName, imageUrl }: FavoriteP
       onPress={handleToggle}
       disabled={toggle.isPending}
       accessibilityRole="button"
-      accessibilityLabel={filled ? 'Verwijder uit favorieten' : 'Voeg toe aan favorieten'}
+      accessibilityLabel={filled ? 'Remove from favorites' : 'Add to favorites'}
     >
       {Platform.OS === 'ios' ? (
         <IconSymbol name={filled ? 'heart.fill' : 'heart'} size={22} color={filled ? '#E11D48' : '#0B1026'} />

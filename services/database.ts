@@ -1,3 +1,4 @@
+// services/database.native.ts
 import * as SQLite from 'expo-sqlite';
 
 export interface FavoritePokemon {
@@ -7,54 +8,64 @@ export interface FavoritePokemon {
   created_at: string;
 }
 
-class DatabaseService {
+class DatabaseServiceNative {
   private db: SQLite.SQLiteDatabase | null = null;
+  private ready = false;
 
   async initDatabase(): Promise<void> {
+    if (this.ready) return;
     this.db = await SQLite.openDatabaseAsync('pokedex.db');
-    await this.createTables();
-  }
 
-  private async createTables(): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
     await this.db.execAsync(`
+      PRAGMA journal_mode = WAL;
       CREATE TABLE IF NOT EXISTS favorites (
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY NOT NULL,
         name TEXT NOT NULL,
-        image_url TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        image_url TEXT DEFAULT '',
+        created_at TEXT NOT NULL
       );
     `);
+
+    this.ready = true;
+  }
+
+  private ensure() {
+    if (!this.db || !this.ready) throw new Error('Database not initialized');
   }
 
   async addFavorite(pokemonId: number, name: string, imageUrl?: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    await this.db.runAsync(
-      'INSERT OR REPLACE INTO favorites (id, name, image_url) VALUES (?, ?, ?)',
-      [pokemonId, name, imageUrl ?? '']
+    this.ensure();
+    const now = new Date().toISOString();
+    await this.db!.runAsync(
+      `INSERT OR REPLACE INTO favorites (id, name, image_url, created_at)
+       VALUES ($id, $name, $image, $created_at);`,
+      { $id: pokemonId, $name: name, $image: imageUrl ?? '', $created_at: now }
     );
   }
 
   async removeFavorite(pokemonId: number): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    await this.db.runAsync('DELETE FROM favorites WHERE id = ?', [pokemonId]);
+    this.ensure();
+    await this.db!.runAsync(`DELETE FROM favorites WHERE id = $id;`, { $id: pokemonId });
   }
 
   async isFavorite(pokemonId: number): Promise<boolean> {
-    if (!this.db) throw new Error('Database not initialized');
-    const row = await this.db.getFirstAsync<{ count: number }>(
-      'SELECT COUNT(*) as count FROM favorites WHERE id = ?',
-      [pokemonId]
+    this.ensure();
+    const row = await this.db!.getFirstAsync<{ id: number }>(
+      `SELECT id FROM favorites WHERE id = $id LIMIT 1;`,
+      { $id: pokemonId }
     );
-    return (row?.count ?? 0) > 0;
+    return !!row;
   }
 
   async getAllFavorites(): Promise<FavoritePokemon[]> {
-    if (!this.db) throw new Error('Database not initialized');
-    return await this.db.getAllAsync<FavoritePokemon>(
-      'SELECT * FROM favorites ORDER BY created_at DESC'
-    );
+    this.ensure();
+    const rows = await this.db!.getAllAsync<FavoritePokemon>(`
+      SELECT id, name, image_url, created_at
+      FROM favorites
+      ORDER BY datetime(created_at) DESC;
+    `);
+    return rows ?? [];
   }
 }
 
-export const databaseService = new DatabaseService();
+export const databaseService = new DatabaseServiceNative();

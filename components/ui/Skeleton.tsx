@@ -35,7 +35,7 @@ export function SkeletonBox({
         styles.box,
         {
           height,
-          width: width ?? ('100%' as const), // literal -> past in `${number}%`
+          width: width ?? ('100%' as const),
           borderRadius: radius,
           opacity,
         },
@@ -60,11 +60,11 @@ export function SkeletonLine({
 export function SkeletonHero() {
   return (
     <View style={styles.hero}>
-      <SkeletonLine width={120} height={16} /> {/* "Vorige" */}
+      <SkeletonLine width={120} height={16} />
       <View style={{ height: 12 }} />
-      <SkeletonLine width={'60%' as const} height={40} /> {/* Name */}
+      <SkeletonLine width={'60%' as const} height={40} />
       <View style={{ height: 8 }} />
-      <SkeletonLine width={70} height={22} /> {/* #id */}
+      <SkeletonLine width={70} height={22} />
       <View style={{ height: 16 }} />
       {/* type chips */}
       <View style={{ flexDirection: 'row', gap: 12 }}>

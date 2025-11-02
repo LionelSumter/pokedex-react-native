@@ -1,8 +1,7 @@
-// hooks/use-favorites.ts
+import { databaseService } from '@/services/database';
 import { PokeApiService } from '@/services/pokemon-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { databaseService } from '../services/database';
 
 export const favoritesKeys = {
   all: ['favorites'] as const,
@@ -36,7 +35,9 @@ export const useToggleFavorite = () => {
       imageUrl?: string;
       isCurrentlyFavorite: boolean;
     }) => {
-      await Haptics.selectionAsync();
+      try {
+        await Haptics.selectionAsync();
+      } catch {}
       if (vars.isCurrentlyFavorite) {
         await databaseService.removeFavorite(vars.pokemonId);
       } else {
@@ -51,7 +52,7 @@ export const useToggleFavorite = () => {
   });
 };
 
-/** Eenvoudige statistieken over favorieten (limiteer tot 25 detailcalls) */
+/** Kleine statistieken over favorieten (limiteer tot 25 detail-calls) */
 export const useFavoriteStats = () => {
   return useQuery({
     queryKey: favoritesKeys.stats,
@@ -62,11 +63,17 @@ export const useFavoriteStats = () => {
         subset.map((f) => PokeApiService.getPokemonById(f.id))
       );
       const ok = details
-        .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof PokeApiService.getPokemonById>>> => r.status === 'fulfilled')
+        .filter(
+          (r): r is PromiseFulfilledResult<
+            Awaited<ReturnType<typeof PokeApiService.getPokemonById>>
+          > => r.status === 'fulfilled'
+        )
         .map((r) => r.value);
 
       const count = favs.length;
-      const avg = (arr: number[]) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0);
+      const avg = (arr: number[]) =>
+        arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+
       return {
         count,
         avgBaseExp: avg(ok.map((p) => p.base_experience ?? 0)),

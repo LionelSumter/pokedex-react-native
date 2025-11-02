@@ -3,13 +3,14 @@ import Favorite from '@/components/ui/favorite';
 import { PokemonImage } from '@/components/ui/pokemon-image';
 import { useEvolutionChainByName, usePokemonByName } from '@/hooks/use-pokemon';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Image,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,8 +21,14 @@ import {
     SkeletonEvolutionList,
     SkeletonHero,
     SkeletonStatsCard,
-    SkeletonTabs,
 } from '@/components/ui/Skeleton';
+
+// Swipeable tabs
+import type {
+    NavigationState,
+    SceneRendererProps
+} from 'react-native-tab-view';
+import { SceneMap, TabBar, TabView } from 'react-native-tab-view';
 
 const TYPE_COLORS: Record<string, string> = {
   normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
@@ -34,21 +41,58 @@ const TYPE_COLORS: Record<string, string> = {
 const HERO_H = 420;
 const EV_IMG_BOX_W = 96;
 
+// eenvoudige route-type
+type Route = {
+  key: 'about' | 'stats' | 'evolution';
+  title: 'About' | 'Stats' | 'Evolution';
+};
+
+/** Typed wrapper zodat TS niet zeurt over TabBar props (éénmalige cast). */
+function MyTabBar(
+  props: SceneRendererProps & { navigationState: NavigationState<Route> }
+) {
+  const TB = TabBar as unknown as React.ComponentType<any>;
+  return (
+    <TB
+      {...props}
+      style={{ backgroundColor: 'transparent', elevation: 0 }}
+      contentContainerStyle={{ paddingHorizontal: 20 }}
+      indicatorStyle={styles.tabsIndicator}
+      pressColor="transparent"
+      tabStyle={{ width: props.layout.width / 3 }}
+      activeColor="#0B1026"
+      inactiveColor="#727B88"
+      renderLabel={({
+        route,
+        focused,
+      }: {
+        route: Route;
+        focused: boolean;
+        color: string;
+      }) => (
+        <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
+          {route.title}
+        </Text>
+      )}
+    />
+  );
+}
+
 export default function PokemonDetailScreen() {
+  const layout = useWindowDimensions();
   const { name } = useLocalSearchParams<{ name: string }>();
 
-  const {
-    data: pokemon,
-    isLoading: isPokemonLoading,
-    error,
-  } = usePokemonByName(name ?? '');
+  // Data
+  const { data: pokemon, isLoading: isPokemonLoading, error } = usePokemonByName(name ?? '');
+  const { steps: evoSteps, isLoading: isEvoLoading } = useEvolutionChainByName(name ?? '');
 
-  const {
-    steps: evoSteps,
-    isLoading: isEvoLoading,
-  } = useEvolutionChainByName(name ?? '');
-
-  const [tab, setTab] = useState<'about' | 'stats' | 'evolution'>('about');
+  // Tab state
+  const [index, setIndex] = useState(0);
+  const routes: Route[] = [
+    { key: 'about', title: 'About' },
+    { key: 'stats', title: 'Stats' },
+    { key: 'evolution', title: 'Evolution' },
+  ];
 
   const prettyId = useMemo(
     () => (pokemon ? `#${String(pokemon.id).padStart(3, '0')}` : ''),
@@ -58,17 +102,17 @@ export default function PokemonDetailScreen() {
   const abilities = useMemo(() => {
     if (!pokemon) return '';
     return pokemon.abilities
-      .map((a) => a.ability.name.replace(/-/g, ' '))
+      .map(a => a.ability.name.replace(/-/g, ' '))
       .map(capitalize)
       .join(', ');
   }, [pokemon]);
 
   const typesLine = useMemo(() => {
     if (!pokemon) return '';
-    return pokemon.types.map((t) => capitalize(t.type.name)).join(', ');
+    return pokemon.types.map(t => capitalize(t.type.name)).join(', ');
   }, [pokemon]);
 
-  // LOADING → skeletons
+  /* ---------- Loading ---------- */
   if (isPokemonLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -83,7 +127,6 @@ export default function PokemonDetailScreen() {
               paddingTop: 24,
             }}
           >
-            <SkeletonTabs />
             <SkeletonAboutCard />
             <SkeletonStatsCard />
             <SkeletonEvolutionList />
@@ -93,7 +136,7 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  // ERROR
+  /* ---------- Error ---------- */
   if (error || !pokemon) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#E9F2F8' }}>
@@ -107,37 +150,112 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  // NORMAL
+  /* ---------- Scenes ---------- */
+  const AboutScene = () => (
+    <View style={styles.card}>
+      <InfoRow label="Name" value={capitalize(pokemon.name)} />
+      <InfoRow label="ID" value={String(pokemon.id).padStart(3, '0')} />
+      <InfoRow label="Base Exp" value={String(pokemon.base_experience ?? '—')} />
+      <InfoRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
+      <InfoRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
+      <InfoRow label="Types" value={typesLine} />
+      <InfoRow label="Abilities" value={abilities} />
+    </View>
+  );
+
+  const StatsScene = () => (
+    <View style={styles.card}>
+      {pokemon.stats.map(s => {
+        const map: Record<string, string> = {
+          hp: 'HP',
+          attack: 'Attack',
+          defense: 'Defense',
+          'special-attack': 'Special Attack',
+          'special-defense': 'Special Defense',
+          speed: 'Speed',
+        };
+        const label = map[s.stat.name] ?? s.stat.name;
+        const val = s.base_stat;
+        const widthPct = Math.min(100, Math.max(0, (val / 180) * 100));
+        return (
+          <View key={s.stat.name} style={{ marginBottom: 16 }}>
+            <View style={styles.statHeader}>
+              <Text style={styles.statName}>{label}</Text>
+              <Text style={styles.statValue}>{val}</Text>
+            </View>
+            <View style={styles.statBarBg}>
+              <View style={[styles.statBarFill, { width: `${widthPct}%` }]} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+
+  const EvolutionScene = () =>
+    isEvoLoading ? (
+      <SkeletonEvolutionList />
+    ) : (
+      <View style={styles.card}>
+        {evoSteps.map((step, idx) => {
+          const id3 = String(step.id).padStart(3, '0');
+          const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
+          const isLast = idx === evoSteps.length - 1;
+
+          return (
+            <View key={step.id}>
+              <View style={styles.evoRow}>
+                <View style={styles.evoImgBox}>
+                  <Image source={{ uri: img }} style={styles.evoImg} />
+                </View>
+                <View style={styles.evoRight}>
+                  <View style={styles.evoIdBadge}>
+                    <Text style={styles.evoIdText}>{id3}</Text>
+                  </View>
+                  <Text style={styles.evoName}>{capitalize(step.name)}</Text>
+                </View>
+              </View>
+              {!isLast && (
+                <View style={styles.dotsWrap}>
+                  <View style={styles.dotsCol}>
+                    <View style={styles.dot} />
+                    <View style={styles.dot} />
+                    <View style={styles.dot} />
+                  </View>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    );
+
+  const renderScene = SceneMap({
+    about: AboutScene,
+    stats: StatsScene,
+    evolution: EvolutionScene,
+  });
+
   const artworkUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.id}.png`;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <ScrollView>
-        {/* ==== Hero blauw ==== */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 0 }} bounces={false} showsVerticalScrollIndicator={false}>
+        {/* ==== Hero ==== */}
         <View style={styles.hero}>
-          {/* Vorige + Favorite (DB + haptics) */}
           <View style={styles.customHeaderRow}>
             <Pressable style={styles.backBtn} onPress={() => router.back()}>
               <Text style={styles.backIcon}>‹</Text>
               <Text style={styles.backText}>Vorige</Text>
             </Pressable>
-
-            <Favorite
-              pokemonId={pokemon.id}
-              pokemonName={pokemon.name}
-              imageUrl={artworkUrl}
-            />
+            <Favorite pokemonId={pokemon.id} pokemonName={pokemon.name} imageUrl={artworkUrl} />
           </View>
 
-          {/* Titel + ID */}
           <View style={styles.titleRow}>
-            <Text numberOfLines={1} style={styles.title}>
-              {capitalize(pokemon.name)}
-            </Text>
+            <Text numberOfLines={1} style={styles.title}>{capitalize(pokemon.name)}</Text>
             <Text style={styles.idText}>{prettyId}</Text>
           </View>
 
-          {/* Type-chips */}
           <View style={styles.typeChipsRow}>
             {pokemon.types.map(({ type }) => {
               const key = type.name.toLowerCase();
@@ -145,140 +263,34 @@ export default function PokemonDetailScreen() {
               return (
                 <View key={type.name} style={styles.typeChip}>
                   <View style={[styles.typeDot, { backgroundColor: dot }]} />
-                  <Text style={styles.typeChipLabel}>
-                    {capitalize(type.name)}
-                  </Text>
+                  <Text style={styles.typeChipLabel}>{capitalize(type.name)}</Text>
                 </View>
               );
             })}
           </View>
 
-          {/* Image half over wit */}
           <View style={styles.imageWrap}>
             <PokemonImage id={pokemon.id} size={300} />
           </View>
         </View>
 
-        {/* ==== White sheet ==== */}
+        {/* ==== Tabs (swipeable) ==== */}
         <View style={styles.sheet}>
-          {/* Tabs */}
-          <View style={styles.tabsWrap}>
-            <View style={styles.tabsRow}>
-              {(['about', 'stats', 'evolution'] as const).map((key) => (
-                <Pressable key={key} onPress={() => setTab(key)} style={styles.tabBtn}>
-                  <Text style={[styles.tabLabel, tab === key && styles.tabLabelActive]}>
-                    {key === 'about' ? 'About' : key === 'stats' ? 'Stats' : 'Evolution'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={styles.tabsBaseline} />
-            <View
-              style={[
-                styles.tabsIndicator,
-                tab === 'about'
-                  ? { left: '0%' }
-                  : tab === 'stats'
-                  ? { left: '33.3333%' }
-                  : { left: '66.6666%' },
-              ]}
-            />
-          </View>
-
-          {/* About */}
-          {tab === 'about' && (
-            <View style={styles.card}>
-              <InfoRow label="Name" value={capitalize(pokemon.name)} />
-              <InfoRow label="ID" value={String(pokemon.id).padStart(3, '0')} />
-              <InfoRow label="Base Exp" value={String(pokemon.base_experience ?? '—')} />
-              <InfoRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
-              <InfoRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
-              <InfoRow label="Types" value={typesLine} />
-              <InfoRow label="Abilities" value={abilities} />
-            </View>
-          )}
-
-          {/* Stats */}
-          {tab === 'stats' && (
-            <View style={styles.card}>
-              {pokemon.stats.map((s) => {
-                const map: Record<string, string> = {
-                  hp: 'HP',
-                  attack: 'Attack',
-                  defense: 'Defense',
-                  'special-attack': 'Special Attack',
-                  'special-defense': 'Special Defense',
-                  speed: 'Speed',
-                };
-                const label = map[s.stat.name] ?? s.stat.name;
-                const val = s.base_stat;
-                const widthPct = Math.min(100, Math.max(0, (val / 180) * 100));
-                return (
-                  <View key={s.stat.name} style={{ marginBottom: 16 }}>
-                    <View style={styles.statHeader}>
-                      <Text style={styles.statName}>{label}</Text>
-                      <Text style={styles.statValue}>{val}</Text>
-                    </View>
-                    <View style={styles.statBarBg}>
-                      <View style={[styles.statBarFill, { width: `${widthPct}%` }]} />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Evolution – Pikachu stijl */}
-          {tab === 'evolution' && (
-            isEvoLoading ? (
-              <SkeletonEvolutionList />
-            ) : (
-              <View style={styles.card}>
-                {evoSteps.map((step, idx) => {
-                  const id3 = String(step.id).padStart(3, '0');
-                  const img = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${step.id}.png`;
-                  const isLast = idx === evoSteps.length - 1;
-
-                  return (
-                    <View key={step.id}>
-                      <View style={styles.evoRow}>
-                        {/* Grijze kolom die top/onder/links raakt */}
-                        <View style={styles.evoImgBox}>
-                          <Image source={{ uri: img }} style={styles.evoImg} />
-                        </View>
-
-                        {/* Rechter wit gedeelte */}
-                        <View style={styles.evoRight}>
-                          <View style={styles.evoIdBadge}>
-                            <Text style={styles.evoIdText}>{id3}</Text>
-                          </View>
-                          <Text style={styles.evoName}>{capitalize(step.name)}</Text>
-                        </View>
-                      </View>
-
-                      {/* Dots onder de image-kolom */}
-                      {!isLast && (
-                        <View style={styles.dotsWrap}>
-                          <View style={styles.dotsCol}>
-                            <View style={styles.dot} />
-                            <View style={styles.dot} />
-                            <View style={styles.dot} />
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            )
-          )}
+          <TabView<Route>
+            navigationState={{ index, routes }}
+            renderScene={renderScene}
+            onIndexChange={setIndex}
+            initialLayout={{ width: layout.width }}
+            renderTabBar={(props: SceneRendererProps & { navigationState: NavigationState<Route> }) => (
+              <MyTabBar {...props} />
+            )}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* Helpers & subcomponents */
 function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -292,16 +304,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/* Styles */
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   error: { color: '#DC2626', fontSize: 16, fontWeight: '700', marginBottom: 10 },
-  retry: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#6E56CF',
-    borderRadius: 10,
-  },
+  retry: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#6E56CF', borderRadius: 10 },
   retryText: { color: '#fff', fontWeight: '700' },
 
   hero: {
@@ -343,36 +349,20 @@ const styles = StyleSheet.create({
   typeDot: { width: 10, height: 10, borderRadius: 999, marginRight: 10 },
   typeChipLabel: { fontWeight: '800', color: '#0B1026' },
 
-  imageWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: -90,
-    alignItems: 'center',
-  },
+  imageWrap: { position: 'absolute', left: 0, right: 0, bottom: -90, alignItems: 'center' },
 
   sheet: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     marginTop: 80,
-    paddingTop: 100,
+    paddingTop: 24,
   },
 
-  tabsWrap: { paddingHorizontal: 20, marginBottom: 16 },
-  tabsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  tabBtn: { paddingVertical: 8 },
-  tabLabel: { fontSize: 24, fontWeight: '800', color: '#727B88' },
+  // Tabbar look
+  tabLabel: { fontSize: 24, fontWeight: '800', color: '#727B88', textTransform: 'none' },
   tabLabelActive: { color: '#0B1026' },
-  tabsBaseline: { height: 2, backgroundColor: '#E5E7EB', borderRadius: 2 },
-  tabsIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    width: '33.3333%',
-    height: 3,
-    backgroundColor: '#6E56CF',
-    borderRadius: 2,
-  },
+  tabsIndicator: { height: 3, backgroundColor: '#6E56CF', borderRadius: 2 },
 
   card: {
     marginHorizontal: 20,
@@ -397,7 +387,7 @@ const styles = StyleSheet.create({
   statBarBg: { height: 10, borderRadius: 999, backgroundColor: '#E5E7EB' },
   statBarFill: { height: 10, borderRadius: 999, backgroundColor: '#6E56CF' },
 
-  /* Evolution: Pikachu-stijl */
+  // Evolution stijl
   evoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -419,25 +409,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   evoImg: { width: 64, height: 64, resizeMode: 'contain' },
-
-  evoRight: {
-    flex: 1,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  evoIdBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#ECE7FF',
-    borderRadius: 10,
-    marginBottom: 8,
-  },
+  evoRight: { flex: 1, paddingVertical: 18, paddingHorizontal: 16, backgroundColor: '#FFFFFF' },
+  evoIdBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#ECE7FF', borderRadius: 10, marginBottom: 8 },
   evoIdText: { color: '#4F46E5', fontWeight: '800' },
   evoName: { fontSize: 22, fontWeight: '900', color: '#0B1026' },
 
-  // Dots onder de image-kolom
   dotsWrap: { height: 28, marginTop: -6, marginBottom: 8 },
   dotsCol: { marginLeft: 18, width: EV_IMG_BOX_W, alignItems: 'center', justifyContent: 'flex-start' },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB', marginVertical: 4 },
