@@ -1,4 +1,3 @@
-// app/(tabs)/index.tsx
 import { PokemonWithId, useInfinitePokemonList } from '@/hooks/use-pokemon';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -34,34 +33,40 @@ export default function AllPokemonScreen() {
     [data?.pages]
   );
 
-  // ✅ Filter Pokémon by name (case-insensitive)
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     if (!s) return allItems;
     return allItems.filter((p) => p.name.toLowerCase().includes(s));
   }, [allItems, search]);
 
+  // ----- Loading -----
   if (isLoading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
-        <Text style={styles.infoText}>Loading Pokémon...</Text>
-      </View>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" />
+          <Text style={styles.infoText}>Loading Pokémon...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
+  // ----- Error -----
   if (error instanceof Error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Error loading Pokémon:</Text>
-        <Text style={styles.infoText}>{error.message}</Text>
-        <Pressable onPress={() => refetch()} style={styles.retryBtn}>
-          <Text style={styles.retryText}>Opnieuw</Text>
-        </Pressable>
-      </View>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Error loading Pokémon:</Text>
+          <Text style={styles.infoText}>{error.message}</Text>
+          <Pressable onPress={() => refetch()} style={styles.retryBtn}>
+            <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
+  // ----- Render -----
   const renderItem = ({ item }: { item: PokemonWithId }) => {
     const idLabel = `#${item.id.padStart(3, '0')}`;
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.id}.png`;
@@ -76,26 +81,17 @@ export default function AllPokemonScreen() {
             <Text style={styles.idText}>{idLabel}</Text>
           </View>
         </View>
-
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.image}
-          resizeMode="contain"
-        />
-
-        <Text numberOfLines={1} style={styles.name}>
-          {item.name}
-        </Text>
+        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="contain" />
+        <Text numberOfLines={1} style={styles.name}>{item.name}</Text>
       </Pressable>
     );
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      {/* 🔍 Search bar */}
       <View style={styles.searchWrap}>
         <TextInput
-          placeholder="Search for Pokémon.."
+          placeholder="Search for Pokémon..."
           placeholderTextColor="#9CA3AF"
           value={search}
           onChangeText={setSearch}
@@ -176,12 +172,7 @@ const styles = StyleSheet.create({
   },
   cardPressed: { opacity: 0.8 },
   topRow: { flexDirection: 'row', justifyContent: 'flex-end', width: '100%' },
-  idBadge: {
-    backgroundColor: '#6E56CF',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
+  idBadge: { backgroundColor: '#6E56CF', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   idText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
   image: { width: 80, height: 80, marginVertical: 10 },
   name: { fontSize: 16, fontWeight: '700', color: '#111827', textTransform: 'capitalize' },
