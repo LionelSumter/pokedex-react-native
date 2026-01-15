@@ -1,65 +1,112 @@
 import PokemonCard from '@/components/ui/pokemon-card';
-import { useFavorites, useFavoriteStats } from '@/hooks/use-favorites';
+import { tokens } from '@/constants/tokens';
+import { useFavorites } from '@/hooks/use-favorites';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FavoritesScreen() {
-  const { data: favorites, isLoading } = useFavorites();
-  const { data: stats } = useFavoriteStats();
+  const { data: favorites, isLoading, error } = useFavorites();
 
   if (isLoading) {
     return (
-      <SafeAreaView style={s.safe}>
-        <ActivityIndicator size="large" />
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" />
+          <Text style={styles.infoText}>Loading…</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
-  if (!favorites || favorites.length === 0) {
+  if (error instanceof Error) {
     return (
-      <SafeAreaView style={s.safe}>
-        <Text style={s.empty}>No favorites yet</Text>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Error loading favorites:</Text>
+          <Text style={styles.infoText}>{error.message}</Text>
+        </View>
       </SafeAreaView>
     );
   }
+
+  const renderItem = ({ item }: { item: any }) => (
+    <PokemonCard
+      item={{
+        id: item.pokemonId ?? item.id,
+        name: item.name,
+      }}
+    />
+  );
 
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.header}>
-        <Text style={s.title}>My favorites</Text>
-        {stats && (
-          <Text style={s.sub}>
-            {stats.count} saved · avg exp {stats.avgBaseExp}
-          </Text>
-        )}
+    <SafeAreaView style={styles.safe} edges={['left', 'right']}>
+      <View style={styles.topPad}>
+        <Text style={styles.listTitle}>My favorites</Text>
       </View>
 
       <FlatList
-        data={favorites}
-        keyExtractor={(f) => String(f.id)}
+        data={favorites ?? []}
+        renderItem={renderItem}
+        keyExtractor={(item: any) => String(item.pokemonId ?? item.id)}
         numColumns={2}
-        columnWrapperStyle={s.column}
-        contentContainerStyle={s.list}
-        renderItem={({ item }) => (
-          <PokemonCard
-            item={{
-              id: item.id,
-              name: item.name,
-              imageUrl: item.image_url,
-            }}
-          />
-        )}
+        columnWrapperStyle={styles.column}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No favorites yet…</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
 }
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#E9F2F8' },
-  header: { padding: 16 },
-  title: { fontSize: 24, fontWeight: '900' },
-  sub: { color: '#6B7280', marginTop: 4 },
-  list: { paddingHorizontal: 16, paddingBottom: 40 },
-  column: { justifyContent: 'space-between', marginBottom: 12 },
-  empty: { textAlign: 'center', marginTop: 40, fontSize: 18 },
+const styles = StyleSheet.create({
+  // 1-op-1 dezelfde basis als Home
+  safe: { flex: 1, backgroundColor: tokens.color.surface.background },
+
+  topPad: {
+    paddingTop: 76,
+  },
+
+  listTitle: {
+    fontFamily: tokens.typography.family.heading,
+    fontSize: tokens.typography.size.title,
+    lineHeight: tokens.typography.lineHeight.title,
+    color: tokens.color.primary.midnight,
+    paddingHorizontal: tokens.spacing.screen,
+    marginBottom: 16,
+  },
+
+  listContainer: {
+    paddingHorizontal: tokens.spacing.screen,
+    paddingBottom: 120,
+  },
+
+  column: {
+    justifyContent: 'space-between',
+    marginBottom: tokens.spacing.grid,
+    gap: tokens.spacing.grid,
+  },
+
+  emptyContainer: { alignItems: 'center', marginTop: 40 },
+  emptyText: {
+    fontFamily: tokens.typography.family.bold,
+    fontSize: tokens.typography.size.body,
+    color: tokens.color.text.placeholder,
+  },
+
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  infoText: {
+    marginTop: tokens.spacing.sm,
+    fontFamily: tokens.typography.family.base,
+    fontSize: tokens.typography.size.body,
+    color: tokens.color.text.muted,
+  },
+  errorText: {
+    fontFamily: tokens.typography.family.bold,
+    fontSize: 18,
+    color: tokens.color.status.error,
+  },
 });

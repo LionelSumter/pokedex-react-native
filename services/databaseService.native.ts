@@ -1,12 +1,5 @@
-// services/database.native.ts
 import * as SQLite from 'expo-sqlite';
-
-export interface FavoritePokemon {
-  id: number;
-  name: string;
-  image_url: string;
-  created_at: string;
-}
+import type { FavoritePokemon } from './databaseService.types';
 
 class DatabaseServiceNative {
   private db: SQLite.SQLiteDatabase | null = null;

@@ -1,35 +1,35 @@
+import { tokens } from '@/constants/tokens';
 import { useIsFavorite, useToggleFavorite } from '@/hooks/use-favorites';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import {
-    ActionSheetIOS,
-    Alert,
-    Image,
-    Platform,
-    Pressable,
-    Share,
-    StyleSheet,
-    Text,
-    View,
+  ActionSheetIOS,
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 export type PokemonCardItem = {
   id: number | string;
   name: string;
-  imageUrl?: string;
 };
 
 type Props = {
   item: PokemonCardItem;
 };
 
+
 export default function PokemonCard({ item }: Props) {
   const id = Number(item.id);
-  const idLabel = `#${String(id).padStart(3, '0')}`;
+  const label = String(id).padStart(3, '0');
 
-  const imageUrl =
-    item.imageUrl ??
-    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+  // ✅ Lists always use classic sprite
+  const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 
   const { data: isFav } = useIsFavorite(id);
   const toggle = useToggleFavorite();
@@ -45,9 +45,13 @@ export default function PokemonCard({ item }: Props) {
     });
 
   const sharePokemon = async () => {
-    await Share.share({
-      message: `${item.name} ${idLabel}\n${imageUrl}`,
-    });
+    try {
+      await Share.share({
+        message: `${item.name} #${label}\n${imageUrl}`,
+      });
+    } catch (err) {
+      console.warn('Share failed', err);
+    }
   };
 
   const openActions = () => {
@@ -76,25 +80,36 @@ export default function PokemonCard({ item }: Props) {
   };
 
   return (
-    <Pressable onPress={openDetail} style={({ pressed }) => [s.card, pressed && s.pressed]}>
-      <View style={s.topRow}>
-        <View style={s.idBadge}>
-          <Text style={s.idText}>{idLabel}</Text>
+    <Pressable onPress={openDetail} style={({ pressed }) => [s.card, pressed && s.cardPressed]}>
+      {/* Image well */}
+      <View style={s.imageWell}>
+        <View style={s.badge}>
+          <Text style={s.badgeText}>{label}</Text>
         </View>
+
+        {/* ✅ Render at fixed size to avoid stretching / washed look */}
+        <Image source={{ uri: imageUrl }} style={s.sprite} resizeMode="contain" />
+      </View>
+
+      {/* Bottom row */}
+      <View style={s.bottomRow}>
+        <Text numberOfLines={1} style={s.name}>
+          {item.name}
+        </Text>
 
         <Pressable
           hitSlop={12}
+          style={s.kebabBtn}
           onPress={(e) => {
             e.stopPropagation();
             openActions();
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Open actions"
         >
-          <Ionicons name="ellipsis-vertical" size={18} color="#6B7280" />
+          <Ionicons name="ellipsis-vertical" size={18} color={tokens.color.icon.muted} />
         </Pressable>
       </View>
-
-      <Image source={{ uri: imageUrl }} style={s.image} resizeMode="contain" />
-      <Text numberOfLines={1} style={s.name}>{item.name}</Text>
     </Pressable>
   );
 }
@@ -102,31 +117,73 @@ export default function PokemonCard({ item }: Props) {
 const s = StyleSheet.create({
   card: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: tokens.color.surface.card,
+    borderRadius: tokens.radius.md,
+    padding: tokens.spacing.cardPadding,
+    ...tokens.shadow.soft,
+  },
+  cardPressed: { opacity: 0.9 },
+
+  // Full-bleed image area (no white space top/sides)
+  imageWell: {
+    marginHorizontal: -tokens.spacing.cardPadding,
+    marginTop: -tokens.spacing.cardPadding,
+
+    height: 163,
+    backgroundColor: tokens.color.surface.imageWell,
+    borderTopLeftRadius: tokens.radius.md,
+    borderTopRightRadius: tokens.radius.md,
+
     alignItems: 'center',
-    shadowColor: '#1D1D1D',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    justifyContent: 'center',
+    position: 'relative',
   },
-  pressed: { opacity: 0.85 },
 
-  topRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  idBadge: {
-    backgroundColor: '#6E56CF',
-    borderRadius: 999,
-    paddingHorizontal: 10,
+  // ID badge inside the image well (top-left)
+  badge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: tokens.color.primary.purple,
+    borderRadius: tokens.radius.sm,
+    paddingHorizontal: 8,
     paddingVertical: 4,
+    zIndex: 2,
   },
-  idText: { color: '#FFF', fontWeight: '700', fontSize: 12 },
+  badgeText: {
+    color: tokens.color.text.onPrimary,
+    fontFamily: tokens.typography.family.bold,
+    fontSize: tokens.typography.size.badge,
+  },
 
-  image: { width: 80, height: 80, marginVertical: 10 },
-  name: { fontSize: 16, fontWeight: '700', textTransform: 'capitalize' },
+  // ✅ Fixed size = less blur than scaling to 90–100%
+ sprite: {
+  width: '75%',
+  height: '75%',
+  flexShrink: 0,  
+},
+
+  bottomRow: {
+    marginTop: tokens.spacing.cardContentGap,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+
+  name: {
+    flex: 1,
+    color: tokens.color.text.primary,
+    fontFamily: tokens.typography.family.bold,
+    fontSize: tokens.typography.size.body,
+    lineHeight: tokens.typography.lineHeight.body,
+    textTransform: 'capitalize',
+  },
+
+  kebabBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: tokens.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

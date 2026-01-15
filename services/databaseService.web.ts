@@ -1,9 +1,4 @@
-export interface FavoritePokemon {
-  id: number;
-  name: string;
-  image_url: string;
-  created_at: string;
-}
+import type { FavoritePokemon } from './databaseService.types';
 
 const KEY = 'pokedex_favorites';
 
@@ -21,13 +16,11 @@ function writeAll(items: FavoritePokemon[]) {
 }
 
 class DatabaseServiceWeb {
-  async initDatabase(): Promise<void> {
-    // niets nodig voor localStorage
-  }
+  async initDatabase(): Promise<void> {}
 
   async addFavorite(pokemonId: number, name: string, imageUrl?: string): Promise<void> {
     const items = readAll();
-    const idx = items.findIndex(x => x.id === pokemonId);
+    const idx = items.findIndex((x) => x.id === pokemonId);
     const now = new Date().toISOString();
     const row: FavoritePokemon = {
       id: pokemonId,
@@ -35,16 +28,17 @@ class DatabaseServiceWeb {
       image_url: imageUrl ?? '',
       created_at: now,
     };
-    if (idx >= 0) items[idx] = row; else items.unshift(row);
+    if (idx >= 0) items[idx] = row;
+    else items.unshift(row);
     writeAll(items);
   }
 
   async removeFavorite(pokemonId: number): Promise<void> {
-    writeAll(readAll().filter(x => x.id !== pokemonId));
+    writeAll(readAll().filter((x) => x.id !== pokemonId));
   }
 
   async isFavorite(pokemonId: number): Promise<boolean> {
-    return readAll().some(x => x.id === pokemonId);
+    return readAll().some((x) => x.id === pokemonId);
   }
 
   async getAllFavorites(): Promise<FavoritePokemon[]> {

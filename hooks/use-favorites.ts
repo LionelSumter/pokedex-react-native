@@ -1,4 +1,4 @@
-import { databaseService } from '@/services/database.native';
+import { databaseService } from '@/services/databaseService.native';
 import { PokeApiService } from '@/services/pokemon-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';

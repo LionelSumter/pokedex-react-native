@@ -1,5 +1,5 @@
 // app/_layout.tsx
-import { databaseService } from '@/services/database.native'; // ← laat platform resolver .native/.web kiezen
+import { databaseService } from '@/services/databaseService.native'; // ← laat platform resolver .native/.web kiezen
 import { useAppFonts } from '@/theme/fonts';
 import { DarkTheme as NavDark, DefaultTheme as NavLight, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
