@@ -2,32 +2,39 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
+
+import { BlurView } from 'expo-blur';
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TabView } from 'react-native-tab-view';
+
 import { PokemonImage } from '@/components/ui/pokemon-image';
+import { TYPE_COLORS } from '@/constants/pokemon-types';
 import { tokens } from '@/constants/tokens';
-import { useEvolutionChainByName, usePokemonByName } from '@/hooks/use-pokemon';
+import { useEvolutionChainByName } from '@/hooks/use-evolution';
+import { useIsFavorite, useToggleFavorite } from '@/hooks/use-favorites';
+import { usePokemonByName } from '@/hooks/use-pokemon';
 
 type TabKey = 'about' | 'stats' | 'evolution';
 
-/** ====== Detail measurements (from your Figma) ====== */
 const DETAIL = {
   padX: 24,
 
   chipsToImage: 24,
-  imageOverlap: 50, // white sheet starts under last 50px of image
+  imageOverlap: 50,
 
-  // Tabs: fixed position within white sheet
-  tabsTopFromSheet: 74, // your requirement
+  // Tabs
+  tabsTopFromSheet: 74,
   tabsItemW: 114,
   tabsItemH: 24,
   tabsTrackH: 2,
@@ -39,7 +46,6 @@ const DETAIL = {
   statsBarH: 4,
 
   // Evolution
-  evoPadTop: 24,
   evoCardGap: 38,
   evoCardH: 80,
   evoRadius: 8,
@@ -47,16 +53,12 @@ const DETAIL = {
   evoWellBg: '#F6F6FF',
   evoInnerPad: 12,
   evoNameGap: 8,
-
-  // ✅ Bigger sprite (was too small)
-  evoSpriteSize: 72,
-
+  evoSpriteSize: 64,
   evoConnectorH: 14,
 
   tabbarH: 84,
 } as const;
 
-/** ====== Stat max map (normalization) ====== */
 export const STAT_MAX_BY_NAME: Record<string, number> = {
   hp: 255,
   attack: 190,
@@ -83,19 +85,29 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-/** ✅ Shadow (pixel-ish soft shadow like Figma) */
 const SOFT_CARD_SHADOW = {
   shadowColor: '#000',
-  shadowOpacity: 0.10,
-  shadowRadius: 16,
-  shadowOffset: { width: 0, height: 8 },
-  elevation: 4,
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 3,
 } as const;
 
+const HEADER_TOTAL_H = 100;
+
+/** ✅ TYPE COLORS SAFE MAP */
+const TYPE_COLORS_SAFE: Record<string, string> =
+  TYPE_COLORS && typeof TYPE_COLORS === 'object' ? (TYPE_COLORS as any) : {};
+
+function getTypeColor(typeName: string) {
+  const key = String(typeName ?? '').toLowerCase();
+  return TYPE_COLORS_SAFE[key] ?? '#999';
+}
 
 export default function PokemonDetailScreen() {
   const { name } = useLocalSearchParams<{ name: string }>();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   const pokemonName = String(name ?? '').toLowerCase();
 
@@ -103,19 +115,52 @@ export default function PokemonDetailScreen() {
   const { steps: evoSteps, isLoading: evoLoading, error: evoError } =
     useEvolutionChainByName(pokemonName);
 
-  const [tab, setTab] = useState<TabKey>('about');
-  const tabIndex = tab === 'about' ? 0 : tab === 'stats' ? 1 : 2;
+  // ✅ IMPORTANT: favorites hooks MUST be called before any early returns (hook order)
+  const pokemonId = pokemon?.id;
+  const { data: isFav } = useIsFavorite(pokemonId);
+  const toggleFavorite = useToggleFavorite();
 
   const bottomPad = DETAIL.tabbarH + insets.bottom + 24;
 
+  const [sheetTopY, setSheetTopY] = useState<number>(460); // fallback
+
   const types = useMemo(() => {
     const arr = pokemon?.types ?? [];
-    return arr.map((t: any) => t?.type?.name).filter(Boolean) as string[];
+    return arr
+      .map((t: any) => String(t?.type?.name ?? '').toLowerCase())
+      .filter(Boolean) as string[];
   }, [pokemon]);
 
-  // Content should start BELOW the fixed tabs area:
+  const headerH = HEADER_TOTAL_H;
+
+  // ===== TabView state =====
+  const routes = useMemo(
+    () => [
+      { key: 'about' as const, title: 'About' },
+      { key: 'stats' as const, title: 'Stats' },
+      { key: 'evolution' as const, title: 'Evolution' },
+    ],
+    []
+  );
+  const [index, setIndex] = useState(0);
+  const tabKey = routes[index]?.key as TabKey;
+
+  // Content starts below fixed tabs
   const contentTopPad =
     DETAIL.tabsTopFromSheet + DETAIL.tabsItemH + DETAIL.tabsToContent;
+
+  // ✅ Outer ScrollView handles scrolling; TabView scenes must NOT scroll (so no VirtualizedList warnings)
+  // We'll measure each scene's height and set the TabView container height accordingly.
+  const [sceneHeights, setSceneHeights] = useState<Record<TabKey, number>>({
+    about: 0,
+    stats: 0,
+    evolution: 0,
+  });
+
+  const tabViewHeight = Math.max(
+    320,
+    (sceneHeights[tabKey] || 0) + contentTopPad + bottomPad
+  );
 
   if (isLoading) {
     return (
@@ -141,180 +186,246 @@ export default function PokemonDetailScreen() {
     );
   }
 
-  return (
-    // Root safe area: left/right only (hero + image can go edge-to-edge)
-    <SafeAreaView style={s.safe} edges={['left', 'right']}>
-      <View style={s.container}>
-        {/* HERO background (behind everything) */}
-        <View style={s.heroBg} pointerEvents="none" />
+  const favorite = !!isFav;
 
-        {/* Header (top safe area ONLY here) */}
-        <View style={[s.headerRow, { paddingTop: insets.top + 6 }]}>
-          <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
-            <Ionicons
-              name="chevron-back"
-              size={22}
-              color={tokens.color.primary.midnight}
-            />
-            <Text style={s.backText}>Vorige</Text>
-          </Pressable>
-
-          <Pressable onPress={() => {}} hitSlop={10}>
-            <Ionicons
-              name="heart-outline"
-              size={22}
-              color={tokens.color.primary.midnight}
-            />
-          </Pressable>
+  const renderTabBar = () => {
+    return (
+      <View style={s.tabsWrap}>
+        <View style={s.tabsRow}>
+          {routes.map((r, i) => {
+            const active = i === index;
+            return (
+              <Pressable
+                key={r.key}
+                style={s.tabBtn}
+                onPress={() => setIndex(i)}
+                hitSlop={6}
+              >
+                <Text style={[s.tabLabel, active && s.tabLabelActive]}>
+                  {r.title}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Title + chips + id */}
-        <View style={s.titleRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.title}>{titleCase(pokemon.name)}</Text>
-
-            <View style={s.chipsRow}>
-              {types.map((t) => (
-                <View key={t} style={s.chip}>
-                  <View style={s.dot} />
-                  <Text style={s.chipText}>{titleCase(t)}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <Text style={s.idBadge}>#{pad3(pokemon.id)}</Text>
-        </View>
-
-        {/* Image (must sit ON TOP of the white sheet) */}
-        <View style={s.imageWrap}>
-          <PokemonImage id={pokemon.id} size={200} />
-        </View>
-
-        {/* White sheet */}
-        <View style={s.sheet}>
-          {/* Tabs: FIXED position from top of the white sheet */}
-          <View style={s.tabsWrap}>
-            <View style={s.tabsRow}>
-              <TabButton
-                label="About"
-                active={tab === 'about'}
-                onPress={() => setTab('about')}
-              />
-              <TabButton
-                label="Stats"
-                active={tab === 'stats'}
-                onPress={() => setTab('stats')}
-              />
-              <TabButton
-                label="Evolution"
-                active={tab === 'evolution'}
-                onPress={() => setTab('evolution')}
-              />
-            </View>
-
-            <View style={s.track}>
-              <View
-                style={[
-                  s.indicator,
-                  { transform: [{ translateX: tabIndex * DETAIL.tabsItemW }] },
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* Scenes (content starts under fixed tabs) */}
-          {tab === 'about' && (
-            <View style={[s.scenePad, { paddingTop: contentTopPad, paddingBottom: bottomPad }]}>
-              <AboutRow label="Name" value={titleCase(pokemon.name)} />
-              <AboutRow label="ID" value={pad3(pokemon.id)} />
-              <AboutRow label="Base" value={String(pokemon.base_experience ?? '-')} />
-              <AboutRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
-              <AboutRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
-              <AboutRow label="Types" value={types.map(titleCase).join(', ') || '-'} />
-              <AboutRow
-                label="Abilities"
-                value={(pokemon.abilities ?? [])
-                  .map((a: any) => a?.ability?.name)
-                  .filter(Boolean)
-                  .map(titleCase)
-                  .join(', ') || '-'}
-              />
-            </View>
-          )}
-
-          {tab === 'stats' && (
-            <View style={[s.statsPad, { paddingTop: contentTopPad, paddingBottom: bottomPad }]}>
-              {(pokemon.stats ?? []).map((st: any) => {
-                const key = String(st?.stat?.name ?? '');
-                const value = Number(st?.base_stat ?? 0);
-                const max = STAT_MAX_BY_NAME[key] ?? 255;
-                const pct = clamp01(value / max);
-
-                return (
-                  <View key={key} style={s.statBlock}>
-                    <View style={s.statTop}>
-                      <Text style={s.statLabel}>{titleCase(key)}</Text>
-                      <Text style={s.statValue}>{value}</Text>
-                    </View>
-
-                    <View style={s.statTrack}>
-                      <View style={[s.statFill, { width: `${pct * 100}%` }]} />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {tab === 'evolution' && (
-            <View style={{ flex: 1 }}>
-              {evoLoading ? (
-                <View style={[s.centerSmall, { paddingTop: contentTopPad }]}>
-                  <ActivityIndicator />
-                  <Text style={s.muted}>Loading evolution…</Text>
-                </View>
-              ) : evoError ? (
-                <View style={[s.centerSmall, { paddingTop: contentTopPad }]}>
-                  <Text style={s.errorTitle}>Error</Text>
-                  <Text style={s.muted}>
-                    {evoError instanceof Error ? evoError.message : 'Failed to load evolution'}
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={evoSteps ?? []}
-                  keyExtractor={(item) => `${item.id}-${item.name}`}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={[
-                    s.evoList,
-                    { paddingTop: contentTopPad, paddingBottom: bottomPad },
-                  ]}
-                  ItemSeparatorComponent={EvolutionSeparator}
-                  renderItem={({ item }) => <EvolutionCard id={item.id} name={item.name} />}
-                />
-              )}
-            </View>
-          )}
+        <View style={s.track}>
+          <View
+            style={[
+              s.indicator,
+              { transform: [{ translateX: index * DETAIL.tabsItemW }] },
+            ]}
+          />
         </View>
       </View>
-    </SafeAreaView>
-  );
-}
+    );
+  };
 
-function TabButton({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
+  const renderAbout = () => (
+    <View
+      style={[s.scenePad, { paddingTop: contentTopPad, paddingBottom: bottomPad }]}
+      onLayout={(e) => {
+        const h = e.nativeEvent.layout.height;
+        setSceneHeights((prev) => (prev.about === h ? prev : { ...prev, about: h }));
+      }}
+    >
+      <AboutRow label="Name" value={titleCase(pokemon.name)} />
+      <AboutRow label="ID" value={pad3(pokemon.id)} />
+      <AboutRow label="Base" value={String(pokemon.base_experience ?? '-')} />
+      <AboutRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
+      <AboutRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
+      <AboutRow label="Types" value={types.map(titleCase).join(', ') || '-'} />
+      <AboutRow
+        label="Abilities"
+        value={(pokemon.abilities ?? [])
+          .map((a: any) => a?.ability?.name)
+          .filter(Boolean)
+          .map(titleCase)
+          .join(', ') || '-'}
+      />
+    </View>
+  );
+
+  const renderStats = () => (
+    <View
+      style={[s.statsPad, { paddingTop: contentTopPad, paddingBottom: bottomPad }]}
+      onLayout={(e) => {
+        const h = e.nativeEvent.layout.height;
+        setSceneHeights((prev) => (prev.stats === h ? prev : { ...prev, stats: h }));
+      }}
+    >
+      {(pokemon.stats ?? []).map((st: any) => {
+        const key = String(st?.stat?.name ?? '');
+        const value = Number(st?.base_stat ?? 0);
+        const max = STAT_MAX_BY_NAME[key] ?? 255;
+        const pct = clamp01(value / max);
+
+        return (
+          <View key={key} style={s.statBlock}>
+            <View style={s.statTop}>
+              <Text style={s.statLabel}>{titleCase(key)}</Text>
+              <Text style={s.statValue}>{value}</Text>
+            </View>
+
+            <View style={s.statTrack}>
+              <View style={[s.statFill, { width: `${pct * 100}%` }]} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+
+  const renderEvolution = () => (
+    <View
+      style={{ paddingBottom: bottomPad }}
+      onLayout={(e) => {
+        const h = e.nativeEvent.layout.height;
+        setSceneHeights((prev) =>
+          prev.evolution === h ? prev : { ...prev, evolution: h }
+        );
+      }}
+    >
+      {evoLoading ? (
+        <View style={[s.centerSmall, { paddingTop: contentTopPad }]}>
+          <ActivityIndicator />
+          <Text style={s.muted}>Loading evolution…</Text>
+        </View>
+      ) : evoError ? (
+        <View style={[s.centerSmall, { paddingTop: contentTopPad }]}>
+          <Text style={s.errorTitle}>Error</Text>
+          <Text style={s.muted}>
+            {evoError instanceof Error ? evoError.message : 'Failed to load evolution'}
+          </Text>
+        </View>
+      ) : (
+        // ✅ NO FlatList here (avoids VirtualizedList in ScrollView warning)
+        <View style={[s.evoList, { paddingTop: contentTopPad }]}>
+          {(evoSteps ?? []).map((item, idx) => (
+            <View key={`${item.id}-${item.name}`}>
+              <EvolutionCard id={item.id} name={item.name} />
+              {idx < (evoSteps?.length ?? 0) - 1 ? <EvolutionSeparator /> : null}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+
+  const renderScene = ({ route }: { route: { key: TabKey } }) => {
+    switch (route.key) {
+      case 'about':
+        return renderAbout();
+      case 'stats':
+        return renderStats();
+      case 'evolution':
+        return renderEvolution();
+      default:
+        return null;
+    }
+  };
+
   return (
-    <Pressable style={s.tabBtn} onPress={onPress} hitSlop={6}>
-      <Text style={[s.tabLabel, active && s.tabLabelActive]}>{label}</Text>
-    </Pressable>
+    <SafeAreaView style={s.safe} edges={['left', 'right']}>
+      <View style={s.container}>
+        {/* ✅ FIXED header (blur + safe area) */}
+        <View style={[s.headerRow, { height: headerH, paddingTop: insets.top }]}>
+          <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFillObject} />
+          <View style={s.headerTint} pointerEvents="none" />
+
+          <View style={s.headerInner}>
+            <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
+              <Ionicons
+                name="chevron-back"
+                size={20}
+                color={tokens.color.primary.midnight}
+              />
+              <Text style={s.backText}>Vorige</Text>
+            </Pressable>
+
+            <Pressable
+              hitSlop={10}
+              onPress={() => {
+                const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemon.id}.png`;
+                toggleFavorite.mutate({
+                  pokemonId: pokemon.id,
+                  name: pokemon.name,
+                  imageUrl,
+                  isCurrentlyFavorite: favorite,
+                });
+              }}
+            >
+              <Ionicons
+                name={favorite ? 'heart' : 'heart-outline'}
+                size={24}
+                color={favorite ? '#E53935' : tokens.color.primary.midnight}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* OUTER scroll (page) */}
+        <ScrollView
+          style={s.pageScroll}
+          contentContainerStyle={[s.scrollContent, { paddingTop: headerH }]}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={false}
+          bounces={false}
+          overScrollMode="never"
+          alwaysBounceVertical={false}
+        >
+          {/* Blue hero behind */}
+          <View style={[s.heroBg, { height: sheetTopY }]} pointerEvents="none" />
+
+          {/* Title + chips + id */}
+          <View style={s.titleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.title}>{titleCase(pokemon.name)}</Text>
+
+              <View style={s.chipsRow}>
+                {(types ?? []).map((t) => (
+                  <View key={t} style={s.chip}>
+                    <View style={[s.dot, { backgroundColor: getTypeColor(t) }]} />
+                    <Text style={s.chipText}>{titleCase(t)}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <Text style={s.idBadge}>#{pad3(pokemon.id)}</Text>
+          </View>
+
+          {/* Image */}
+          <View style={s.imageWrap}>
+            <PokemonImage id={pokemon.id} size={200} />
+          </View>
+
+          {/* White sheet */}
+          <View
+            onLayout={(e) => {
+              const y = e.nativeEvent.layout.y;
+              if (y > 0 && Math.abs(y - sheetTopY) > 1) setSheetTopY(y);
+            }}
+            style={s.sheet}
+          >
+            {/* ✅ TabView container with measured height (so outer ScrollView scrolls) */}
+            <View style={{ height: tabViewHeight }}>
+              {renderTabBar()}
+
+              <TabView
+                navigationState={{ index, routes }}
+                onIndexChange={setIndex}
+                renderScene={renderScene}
+                renderTabBar={() => null} // we use our own
+                initialLayout={{ width }}
+                swipeEnabled
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -342,54 +453,68 @@ function EvolutionCard({ id, name }: { id: number; name: string }) {
   const spriteUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 
   return (
-    <View style={s.evoCardShadow}>
-      <View style={s.evoCardInner}>
-        <View style={s.evoWell}>
-          <Image source={{ uri: spriteUrl }} style={s.evoSprite} resizeMode="contain" />
+    <View style={s.evoCard}>
+      <View style={s.evoWell}>
+        <Image source={{ uri: spriteUrl }} style={s.evoSprite} resizeMode="contain" />
+      </View>
+
+      <View style={s.evoBody}>
+        <View style={s.evoBadge}>
+          <Text style={s.evoBadgeText}>{pad3(id)}</Text>
         </View>
 
-        <View style={s.evoBody}>
-          <View style={s.evoBadge}>
-            <Text style={s.evoBadgeText}>{pad3(id)}</Text>
-          </View>
-
-          <Text style={s.evoName}>{titleCase(name)}</Text>
-        </View>
+        <Text style={s.evoName}>{titleCase(name)}</Text>
       </View>
     </View>
   );
 }
 
-
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: tokens.color.surface.background },
-  container: { flex: 1 },
+  safe: { flex: 1, backgroundColor: tokens.color.surface.card },
+  container: { flex: 1, backgroundColor: tokens.color.surface.card },
 
-  // hero background behind everything
   heroBg: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 460,
     backgroundColor: tokens.color.surface.background,
   },
 
-  // header
   headerRow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    elevation: 50,
     paddingHorizontal: DETAIL.padX,
+    justifyContent: 'flex-end',
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+  },
+  headerTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(237, 246, 255, 0.50)',
+  },
+  headerInner: {
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   backText: {
-    fontFamily: tokens.typography.family.medium,
-    fontSize: 14,
+    fontFamily: tokens.typography.family.regular,
+    fontSize: 17,
+    lineHeight: 22,
     color: tokens.color.primary.midnight,
   },
 
-  // title + id
+  pageScroll: { flex: 1, backgroundColor: tokens.color.surface.card },
+  scrollContent: { backgroundColor: tokens.color.surface.card },
+
   titleRow: {
     paddingHorizontal: DETAIL.padX,
     marginTop: 16,
@@ -413,7 +538,6 @@ const s = StyleSheet.create({
     opacity: 0.25,
   },
 
-  // chips
   chipsRow: {
     marginTop: 12,
     flexDirection: 'row',
@@ -438,7 +562,6 @@ const s = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  // image must be above sheet
   imageWrap: {
     marginTop: DETAIL.chipsToImage,
     alignItems: 'center',
@@ -446,24 +569,23 @@ const s = StyleSheet.create({
     elevation: 10,
   },
 
-  // sheet: only overlap up by 50px
   sheet: {
-    flex: 1,
+    flexGrow: 1,
     marginTop: -DETAIL.imageOverlap,
     backgroundColor: tokens.color.surface.card,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    zIndex: 0,
   },
 
-  /** Tabs fixed inside sheet */
+  // Custom tab bar
   tabsWrap: {
     position: 'absolute',
     top: DETAIL.tabsTopFromSheet,
     left: 0,
     right: 0,
     paddingHorizontal: DETAIL.padX,
-    zIndex: 5,
+    zIndex: 10,
+    elevation: 10,
   },
   tabsRow: { flexDirection: 'row', height: DETAIL.tabsItemH },
   tabBtn: {
@@ -495,7 +617,7 @@ const s = StyleSheet.create({
     backgroundColor: tokens.color.primary.purple,
   },
 
-  // about
+  // About
   scenePad: {
     paddingHorizontal: DETAIL.padX,
     rowGap: 16,
@@ -517,13 +639,17 @@ const s = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  // stats
+  // Stats
   statsPad: {
     paddingHorizontal: DETAIL.padX,
     rowGap: DETAIL.statsRowGap,
   },
   statBlock: { width: '100%' },
-  statTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  statTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
   statLabel: {
     fontFamily: tokens.typography.family.semibold,
     fontSize: 14,
@@ -550,12 +676,11 @@ const s = StyleSheet.create({
     backgroundColor: tokens.color.primary.purple,
   },
 
-  // evolution list
+  // Evolution (we keep styles; FlatList removed above to avoid nested VirtualizedList)
   evoList: {
     paddingHorizontal: DETAIL.padX,
   },
 
-  // ✅ Soft shadow + same layout
   evoCard: {
     height: DETAIL.evoCardH,
     borderRadius: DETAIL.evoRadius,
@@ -564,7 +689,6 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     ...(tokens.shadow?.soft ?? SOFT_CARD_SHADOW),
   },
-
   evoWell: {
     width: DETAIL.evoWellW,
     height: '100%',
@@ -572,28 +696,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  evoCardShadow: {
-  borderRadius: DETAIL.evoRadius,
-  backgroundColor: 'transparent',
-  ...(tokens.shadow?.soft ?? SOFT_CARD_SHADOW),
-},
-
-evoCardInner: {
-  height: DETAIL.evoCardH,
-  borderRadius: DETAIL.evoRadius,
-  backgroundColor: tokens.color.surface.card,
-  flexDirection: 'row',
-  overflow: 'hidden',
-},
-
-
-  // ✅ Bigger sprite
   evoSprite: {
     width: DETAIL.evoSpriteSize,
     height: DETAIL.evoSpriteSize,
   },
-
   evoBody: {
     flex: 1,
     padding: DETAIL.evoInnerPad,
@@ -638,7 +744,6 @@ evoCardInner: {
     borderLeftColor: 'rgba(14, 9, 64, 0.30)',
   },
 
-  // states
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   centerSmall: { alignItems: 'center', justifyContent: 'center' },
   muted: {

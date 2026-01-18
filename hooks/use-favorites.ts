@@ -1,7 +1,9 @@
-import { databaseService } from '@/services/databaseService.native';
+import { databaseService } from '@/services/database';
 import { PokeApiService } from '@/services/pokemon-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
+
+
 
 export const favoritesKeys = {
   all: ['favorites'] as const,

@@ -1,0 +1,21 @@
+// constants/pokemon-types.ts
+export const TYPE_COLORS: Record<string, string> = {
+  grass: '#4CAF50',
+  poison: '#9C27B0',
+  fire: '#F44336',
+  water: '#2196F3',
+  electric: '#FFEB3B',
+  ghost: '#673AB7',
+  psychic: '#E91E63',
+  bug: '#8BC34A',
+  normal: '#9E9E9E',
+  flying: '#90CAF9',
+  ground: '#A1887F',
+  rock: '#8D6E63',
+  steel: '#B0BEC5',
+  fairy: '#F8BBD0',
+  dark: '#212121',
+  ice: '#00BCD4',
+  dragon: '#3F51B5',
+  fighting: '#795548',
+};
