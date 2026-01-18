@@ -3,6 +3,7 @@ import PokemonCard from '@/components/ui/pokemon-card';
 import { getTokens } from '@/constants/tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { PokemonWithId, useInfinitePokemonList } from '@/hooks/use-pokemon';
+import { i18n } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
@@ -130,7 +131,7 @@ export default function AllPokemonScreen() {
       <SafeAreaView style={s.safe} edges={['left', 'right']}>
         <View style={s.center}>
           <ActivityIndicator size="large" />
-          <Text style={s.muted}>Loading Pokémon…</Text>
+          <Text style={s.muted}>{i18n.t('loadingPokemon')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -140,7 +141,7 @@ export default function AllPokemonScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['left', 'right']}>
         <View style={s.center}>
-          <Text style={s.errorTitle}>Error loading Pokémon</Text>
+          <Text style={s.errorTitle}>{i18n.t('errorLoadingPokemon')}</Text>
           <Text style={s.muted}>{error.message}</Text>
         </View>
       </SafeAreaView>
@@ -160,7 +161,7 @@ export default function AllPokemonScreen() {
               style={{ marginRight: t.spacing.sm }}
             />
             <TextInput
-              placeholder="Search for Pokémon..."
+              placeholder={i18n.t('searchPlaceholder')}
               placeholderTextColor={t.color.text.placeholder}
               value={search}
               onChangeText={setSearch}
@@ -169,7 +170,7 @@ export default function AllPokemonScreen() {
           </View>
         </View>
 
-        <Text style={s.title}>All Pokémon</Text>
+        <Text style={s.title}>{i18n.t('allPokemon')}</Text>
       </View>
 
       <FlatList
@@ -179,7 +180,9 @@ export default function AllPokemonScreen() {
         columnWrapperStyle={s.column}
         contentContainerStyle={s.list}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <PokemonCard item={{ id: item.id, name: item.name }} />}
+        renderItem={({ item }) => (
+          <PokemonCard item={{ id: item.id, name: item.name }} />
+        )}
         onEndReachedThreshold={0.5}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -190,7 +193,7 @@ export default function AllPokemonScreen() {
           isFetchingNextPage ? (
             <View style={s.footer}>
               <ActivityIndicator />
-              <Text style={s.muted}>Loading more…</Text>
+              <Text style={s.muted}>{i18n.t('loadingMore')}</Text>
             </View>
           ) : null
         }

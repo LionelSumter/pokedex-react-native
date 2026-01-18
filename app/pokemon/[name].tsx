@@ -25,6 +25,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEvolutionChainByName } from '@/hooks/use-evolution';
 import { useIsFavorite, useToggleFavorite } from '@/hooks/use-favorites';
 import { usePokemonByName } from '@/hooks/use-pokemon';
+import { i18n } from '@/lib/i18n';
 
 type TabKey = 'about' | 'stats' | 'evolution';
 
@@ -437,9 +438,9 @@ export default function PokemonDetailScreen() {
 
   const routes = useMemo(
     () => [
-      { key: 'about' as const, title: 'About' },
-      { key: 'stats' as const, title: 'Stats' },
-      { key: 'evolution' as const, title: 'Evolution' },
+      { key: 'about' as const, title: i18n.t('tabs.about') },
+      { key: 'stats' as const, title: i18n.t('tabs.stats') },
+      { key: 'evolution' as const, title: i18n.t('tabs.evolution') },
     ],
     []
   );
@@ -501,7 +502,7 @@ export default function PokemonDetailScreen() {
       <SafeAreaView style={s.safe} edges={['left', 'right']}>
         <View style={s.center}>
           <ActivityIndicator size="large" />
-          <Text style={s.muted}>Loading…</Text>
+          <Text style={s.muted}>{i18n.t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -511,9 +512,9 @@ export default function PokemonDetailScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['left', 'right']}>
         <View style={s.center}>
-          <Text style={s.errorTitle}>Error</Text>
+          <Text style={s.errorTitle}>{i18n.t('common.error')}</Text>
           <Text style={s.muted}>
-            {error instanceof Error ? error.message : 'Failed to load'}
+            {error instanceof Error ? error.message : i18n.t('common.failedToLoad')}
           </Text>
         </View>
       </SafeAreaView>
@@ -563,14 +564,14 @@ export default function PokemonDetailScreen() {
         setSceneHeights((prev) => (prev.about === h ? prev : { ...prev, about: h }));
       }}
     >
-      <AboutRow label="Name" value={titleCase(pokemon.name)} />
-      <AboutRow label="ID" value={pad3(pokemon.id)} />
-      <AboutRow label="Base" value={String(pokemon.base_experience ?? '-')} />
-      <AboutRow label="Weight" value={`${(pokemon.weight ?? 0) / 10} kg`} />
-      <AboutRow label="Height" value={`${(pokemon.height ?? 0) / 10} m`} />
-      <AboutRow label="Types" value={types.map(titleCase).join(', ') || '-'} />
+      <AboutRow label={i18n.t('details.name')} value={titleCase(pokemon.name)} />
+      <AboutRow label={i18n.t('details.id')} value={pad3(pokemon.id)} />
+      <AboutRow label={i18n.t('details.base')} value={String(pokemon.base_experience ?? '-')} />
+      <AboutRow label={i18n.t('details.weight')} value={`${(pokemon.weight ?? 0) / 10} kg`} />
+      <AboutRow label={i18n.t('details.height')} value={`${(pokemon.height ?? 0) / 10} m`} />
+      <AboutRow label={i18n.t('details.types')} value={types.map(titleCase).join(', ') || '-'} />
       <AboutRow
-        label="Abilities"
+        label={i18n.t('details.abilities')}
         value={(pokemon.abilities ?? [])
           .map((a: any) => a?.ability?.name)
           .filter(Boolean)
@@ -597,7 +598,7 @@ export default function PokemonDetailScreen() {
         return (
           <View key={key} style={s.statBlock}>
             <View style={s.statTop}>
-              <Text style={s.statLabel}>{titleCase(key)}</Text>
+              <Text style={s.statLabel}>{i18n.t(`stats.${key}`)}</Text>
               <Text style={s.statValue}>{value}</Text>
             </View>
 
@@ -623,13 +624,13 @@ export default function PokemonDetailScreen() {
       {evoLoading ? (
         <View style={[s.centerSmall, { paddingTop: contentTopPad }]}>
           <ActivityIndicator />
-          <Text style={s.muted}>Loading evolution…</Text>
+          <Text style={s.muted}>{i18n.t('details.loadingEvolution')}</Text>
         </View>
       ) : evoError ? (
         <View style={[s.centerSmall, { paddingTop: contentTopPad }]}>
-          <Text style={s.errorTitle}>Error</Text>
+          <Text style={s.errorTitle}>{i18n.t('common.error')}</Text>
           <Text style={s.muted}>
-            {evoError instanceof Error ? evoError.message : 'Failed to load evolution'}
+            {evoError instanceof Error ? evoError.message : i18n.t('details.failedToLoadEvolution')}
           </Text>
         </View>
       ) : (
@@ -671,12 +672,8 @@ export default function PokemonDetailScreen() {
 
           <View style={s.headerInner}>
             <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
-              <Ionicons
-                name="chevron-back"
-                size={20}
-                color={tokens.color.primary.midnight}
-              />
-              <Text style={s.backText}>Vorige</Text>
+              <Ionicons name="chevron-back" size={20} color={tokens.color.primary.midnight} />
+              <Text style={s.backText}>{i18n.t('common.back')}</Text>
             </Pressable>
 
             <Pressable

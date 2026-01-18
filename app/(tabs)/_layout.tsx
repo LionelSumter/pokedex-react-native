@@ -4,6 +4,7 @@ import { PokeballActive } from '@/components/icons/PokeballActive';
 import { PokeballInactive } from '@/components/icons/PokeballInactive';
 import { getTokens } from '@/constants/tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { i18n } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
@@ -30,7 +31,10 @@ export default function TabLayout() {
 
         tabBarStyle: [
           styles.tabBar,
-          { backgroundColor: tabBg, borderTopColor: t.color.tabbar.border },
+          {
+            backgroundColor: tabBg,
+            borderTopColor: t.color.tabbar.border,
+          },
         ],
 
         tabBarBackground: () =>
@@ -41,14 +45,19 @@ export default function TabLayout() {
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: tabBg }]} />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: tabBg },
+              ]}
+            />
           ),
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Pokémons',
+          title: i18n.t('allPokemon'),
           tabBarIcon: ({ focused, color }) =>
             focused ? (
               <PokeballActive size={24} color={color} />
@@ -61,9 +70,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="favorites"
         options={{
-          title: 'Favorites',
+          title: i18n.t('favorites'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'heart' : 'heart-outline'} size={24} color={color} />
+            <Ionicons
+              name={focused ? 'heart' : 'heart-outline'}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />

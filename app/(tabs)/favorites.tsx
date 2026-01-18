@@ -1,7 +1,15 @@
+// app/(tabs)/favorites.tsx
 import PokemonCard from '@/components/ui/pokemon-card';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useTokens } from '@/hooks/use-tokens';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { i18n } from '@/lib/i18n';
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FavoritesScreen() {
@@ -15,7 +23,7 @@ export default function FavoritesScreen() {
       <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" />
-          <Text style={styles.infoText}>Loading…</Text>
+          <Text style={styles.infoText}>{i18n.t('loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -25,7 +33,9 @@ export default function FavoritesScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>Error loading favorites:</Text>
+          <Text style={styles.errorText}>
+            {i18n.t('errorLoadingFavorites')}
+          </Text>
           <Text style={styles.infoText}>{error.message}</Text>
         </View>
       </SafeAreaView>
@@ -44,7 +54,7 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right']}>
       <View style={styles.topPad}>
-        <Text style={styles.listTitle}>My favorites</Text>
+        <Text style={styles.listTitle}>{i18n.t('favorites')}</Text>
       </View>
 
       <FlatList
@@ -57,7 +67,9 @@ export default function FavoritesScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No favorites yet…</Text>
+            <Text style={styles.emptyText}>
+              {i18n.t('noFavorites')}
+            </Text>
           </View>
         }
       />
@@ -67,8 +79,11 @@ export default function FavoritesScreen() {
 
 const makeStyles = (tokens: any) =>
   StyleSheet.create({
-    // 1-op-1 dezelfde basis als Home
-    safe: { flex: 1, backgroundColor: tokens.color.surface.background },
+    //zelfde basis als Home
+    safe: {
+      flex: 1,
+      backgroundColor: tokens.color.surface.background,
+    },
 
     topPad: {
       paddingTop: 60,
@@ -94,20 +109,30 @@ const makeStyles = (tokens: any) =>
       gap: tokens.spacing.grid,
     },
 
-    emptyContainer: { alignItems: 'center', marginTop: 40 },
+    emptyContainer: {
+      alignItems: 'center',
+      marginTop: 40,
+    },
+
     emptyText: {
       fontFamily: tokens.typography.family.bold,
       fontSize: tokens.typography.size.body,
       color: tokens.color.text.placeholder,
     },
 
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    centerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
     infoText: {
       marginTop: tokens.spacing.sm,
       fontFamily: tokens.typography.family.base,
       fontSize: tokens.typography.size.body,
       color: tokens.color.text.muted,
     },
+
     errorText: {
       fontFamily: tokens.typography.family.bold,
       fontSize: 18,
