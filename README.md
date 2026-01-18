@@ -53,8 +53,7 @@ Required items
 
  - [x] Working Expo Go project (QR scannen werkt)
 
- - [x] PokeAPI gebruikt (https://pokeapi.co/
-)
+ - [x] PokeAPI gebruikt (https://pokeapi.co/)
 
  - [x] Lijst met Pokémon wordt geladen (FlatList)
 
@@ -104,14 +103,14 @@ Optional items (extra punten)
 
  - [x] Infinite scroll (useInfiniteQuery + onEndReached)
 
- - [x] Clean TypeScript: geen any, geen casts, geen ts-ignore
+ - [-] Clean TypeScript: geen any, geen casts, geen ts-ignore
 
  - [x] Geen bugs of console errors
 
- - [ ] Animations (FadeInView / Press feedback)
+ - [x ] Animations (FadeInView / Press feedback)
 
-- [ ]  Pixel Perfect (iOS/Android spacing + radius tokens)
+- [ x]  Pixel Perfect (iOS/Android spacing + radius tokens)
 
- - [ ]Localizations (EN/NL via expo-localization)
+ - [ x]Localizations (EN/NL via expo-localization)
 
- - [ ] Pokémon Battle Feature 💯
+ - [ -] Pokémon Battle Feature 💯
