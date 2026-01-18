@@ -44,7 +44,7 @@ export default function RootLayout() {
         try {
           await databaseService.initDatabase();
         } catch (e) {
-          console.warn('DB init failed', e);
+          
         }
       }
 

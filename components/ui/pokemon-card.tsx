@@ -50,7 +50,7 @@ export default function PokemonCard({ item }: Props) {
         message: `${item.name} #${label}\n${imageUrl}`,
       });
     } catch (err) {
-      console.warn('Share failed', err);
+      
     }
   };
 
