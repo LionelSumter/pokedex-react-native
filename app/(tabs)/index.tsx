@@ -1,5 +1,7 @@
+// app/(tabs)/index.tsx
 import PokemonCard from '@/components/ui/pokemon-card';
-import { tokens } from '@/constants/tokens';
+import { getTokens } from '@/constants/tokens';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { PokemonWithId, useInfinitePokemonList } from '@/hooks/use-pokemon';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
@@ -14,6 +16,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AllPokemonScreen() {
+  const scheme = useColorScheme() ?? 'light';
+  const t = useMemo(() => getTokens(scheme), [scheme]);
+
   const [search, setSearch] = useState('');
   const pageSize = 50;
 
@@ -38,6 +43,87 @@ export default function AllPokemonScreen() {
     if (!q) return allItems;
     return allItems.filter((p) => p.name.toLowerCase().includes(q));
   }, [allItems, search]);
+
+  const s = useMemo(
+    () =>
+      StyleSheet.create({
+        safe: {
+          flex: 1,
+          backgroundColor: t.color.surface.background,
+        },
+
+        topPad: {
+          paddingTop: 60,
+        },
+
+        searchWrap: {
+          paddingHorizontal: t.spacing.screen,
+          marginBottom: 32,
+        },
+
+        searchRow: {
+          height: 48,
+          backgroundColor: t.color.surface.card,
+          borderRadius: t.radius.md,
+          paddingHorizontal: t.spacing.searchPaddingX,
+          flexDirection: 'row',
+          alignItems: 'center',
+          ...(t.shadow?.soft ?? {}),
+        },
+
+        searchInput: {
+          flex: 1,
+          color: t.color.text.primary,
+          fontFamily: t.typography.family.base,
+          fontSize: t.typography.size.body,
+        },
+
+        title: {
+          paddingHorizontal: t.spacing.screen,
+          marginBottom: 16,
+          color: t.color.primary.midnight,
+          fontFamily: t.typography.family.heading,
+          fontSize: t.typography.size.title,
+          lineHeight: t.typography.lineHeight.title,
+        },
+
+        list: {
+          paddingHorizontal: t.spacing.screen,
+          paddingBottom: 120,
+        },
+
+        column: {
+          justifyContent: 'space-between',
+          marginBottom: t.spacing.grid,
+          gap: t.spacing.grid,
+        },
+
+        footer: {
+          paddingVertical: t.spacing.md,
+          alignItems: 'center',
+        },
+
+        center: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: t.spacing.sm,
+        },
+
+        muted: {
+          color: t.color.text.muted,
+          fontFamily: t.typography.family.base,
+          fontSize: t.typography.size.body,
+        },
+
+        errorTitle: {
+          color: t.color.status.error,
+          fontFamily: t.typography.family.bold,
+          fontSize: t.typography.size.title,
+        },
+      }),
+    [t]
+  );
 
   if (isLoading) {
     return (
@@ -70,12 +156,12 @@ export default function AllPokemonScreen() {
             <Ionicons
               name="search"
               size={20}
-              color={tokens.color.text.placeholder}
-              style={{ marginRight: tokens.spacing.sm }}
+              color={t.color.text.placeholder}
+              style={{ marginRight: t.spacing.sm }}
             />
             <TextInput
               placeholder="Search for Pokémon..."
-              placeholderTextColor={tokens.color.text.placeholder}
+              placeholderTextColor={t.color.text.placeholder}
               value={search}
               onChangeText={setSearch}
               style={s.searchInput}
@@ -112,80 +198,3 @@ export default function AllPokemonScreen() {
     </SafeAreaView>
   );
 }
-
-const s = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: tokens.color.surface.background,
-  },
-
-  topPad: {
-    paddingTop: 60,
-  },
-
-  searchWrap: {
-    paddingHorizontal: tokens.spacing.screen,
-    marginBottom: 32,
-  },
-
-  searchRow: {
-    height: 48,
-    backgroundColor: tokens.color.surface.card,
-    borderRadius: tokens.radius.md,
-    paddingHorizontal: tokens.spacing.searchPaddingX,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...tokens.shadow.soft,
-  },
-
-  searchInput: {
-    flex: 1,
-    color: tokens.color.text.primary,
-    fontFamily: tokens.typography.family.base,
-    fontSize: tokens.typography.size.body,
-  },
-
-  title: {
-    paddingHorizontal: tokens.spacing.screen,
-    marginBottom: 16,
-    color: tokens.color.primary.midnight,
-    fontFamily: tokens.typography.family.heading,
-    fontSize: tokens.typography.size.title,
-    lineHeight: tokens.typography.lineHeight.title,
-  },
-
-  list: {
-    paddingHorizontal: tokens.spacing.screen,
-    paddingBottom: 120,
-  },
-
-  column: {
-    justifyContent: 'space-between',
-    marginBottom: tokens.spacing.grid,
-    gap: tokens.spacing.grid,
-  },
-
-  footer: {
-    paddingVertical: tokens.spacing.md,
-    alignItems: 'center',
-  },
-
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.spacing.sm,
-  },
-
-  muted: {
-    color: tokens.color.text.muted,
-    fontFamily: tokens.typography.family.base,
-    fontSize: tokens.typography.size.body,
-  },
-
-  errorTitle: {
-    color: tokens.color.status.error,
-    fontFamily: tokens.typography.family.bold,
-    fontSize: tokens.typography.size.title,
-  },
-});

@@ -2,16 +2,19 @@
 import { HapticTab } from '@/components/haptic-tab';
 import { PokeballActive } from '@/components/icons/PokeballActive';
 import { PokeballInactive } from '@/components/icons/PokeballInactive';
-import { tokens } from '@/constants/theme';
+import { getTokens } from '@/constants/tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
+import { useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const tabBg = tokens.color.tabbar.background;
+  const scheme = useColorScheme() ?? 'light';
+  const t = useMemo(() => getTokens(scheme), [scheme]);
+
+  const tabBg = t.color.tabbar.background;
 
   return (
     <Tabs
@@ -20,22 +23,21 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
 
-        tabBarActiveTintColor: tokens.color.primary.purple,
-        tabBarInactiveTintColor: tokens.color.text.muted,
+        tabBarActiveTintColor: t.color.primary.purple,
+        tabBarInactiveTintColor: t.color.text.muted,
 
-        // ✅ ONLY typography changed
         tabBarLabelStyle: styles.label,
 
         tabBarStyle: [
           styles.tabBar,
-          { backgroundColor: tabBg, borderTopColor: tokens.color.tabbar.border },
+          { backgroundColor: tabBg, borderTopColor: t.color.tabbar.border },
         ],
 
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
             <BlurView
               intensity={25}
-              tint={colorScheme === 'dark' ? 'dark' : 'light'}
+              tint={scheme === 'dark' ? 'dark' : 'light'}
               style={StyleSheet.absoluteFill}
             />
           ) : (
@@ -75,8 +77,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     position: 'absolute',
   },
-
-  // ✅ SF Pro Text / Bold / 10
   label: {
     marginTop: 2,
     fontSize: 10,

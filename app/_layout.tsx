@@ -43,7 +43,7 @@ export default function RootLayout() {
       if (Platform.OS !== 'web') {
         try {
           await databaseService.initDatabase();
-        } catch (e) {
+        } catch  {
           
         }
       }

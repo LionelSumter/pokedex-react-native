@@ -1,10 +1,13 @@
 import PokemonCard from '@/components/ui/pokemon-card';
-import { tokens } from '@/constants/tokens';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useTokens } from '@/hooks/use-tokens';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FavoritesScreen() {
+  const tokens = useTokens();
+  const styles = makeStyles(tokens);
+
   const { data: favorites, isLoading, error } = useFavorites();
 
   if (isLoading) {
@@ -62,51 +65,52 @@ export default function FavoritesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  // 1-op-1 dezelfde basis als Home
-  safe: { flex: 1, backgroundColor: tokens.color.surface.background },
+const makeStyles = (tokens: any) =>
+  StyleSheet.create({
+    // 1-op-1 dezelfde basis als Home
+    safe: { flex: 1, backgroundColor: tokens.color.surface.background },
 
-  topPad: {
-    paddingTop: 76,
-  },
+    topPad: {
+      paddingTop: 60,
+    },
 
-  listTitle: {
-    fontFamily: tokens.typography.family.heading,
-    fontSize: tokens.typography.size.title,
-    lineHeight: tokens.typography.lineHeight.title,
-    color: tokens.color.primary.midnight,
-    paddingHorizontal: tokens.spacing.screen,
-    marginBottom: 16,
-  },
+    listTitle: {
+      fontFamily: tokens.typography.family.heading,
+      fontSize: tokens.typography.size.title,
+      lineHeight: tokens.typography.lineHeight.title,
+      color: tokens.color.text.primary,
+      paddingHorizontal: tokens.spacing.screen,
+      marginBottom: 16,
+    },
 
-  listContainer: {
-    paddingHorizontal: tokens.spacing.screen,
-    paddingBottom: 120,
-  },
+    listContainer: {
+      paddingHorizontal: tokens.spacing.screen,
+      paddingBottom: 120,
+    },
 
-  column: {
-    justifyContent: 'space-between',
-    marginBottom: tokens.spacing.grid,
-    gap: tokens.spacing.grid,
-  },
+    column: {
+      justifyContent: 'space-between',
+      marginBottom: tokens.spacing.grid,
+      gap: tokens.spacing.grid,
+    },
 
-  emptyContainer: { alignItems: 'center', marginTop: 40 },
-  emptyText: {
-    fontFamily: tokens.typography.family.bold,
-    fontSize: tokens.typography.size.body,
-    color: tokens.color.text.placeholder,
-  },
+    emptyContainer: { alignItems: 'center', marginTop: 40 },
+    emptyText: {
+      fontFamily: tokens.typography.family.bold,
+      fontSize: tokens.typography.size.body,
+      color: tokens.color.text.placeholder,
+    },
 
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  infoText: {
-    marginTop: tokens.spacing.sm,
-    fontFamily: tokens.typography.family.base,
-    fontSize: tokens.typography.size.body,
-    color: tokens.color.text.muted,
-  },
-  errorText: {
-    fontFamily: tokens.typography.family.bold,
-    fontSize: 18,
-    color: tokens.color.status.error,
-  },
-});
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    infoText: {
+      marginTop: tokens.spacing.sm,
+      fontFamily: tokens.typography.family.base,
+      fontSize: tokens.typography.size.body,
+      color: tokens.color.text.muted,
+    },
+    errorText: {
+      fontFamily: tokens.typography.family.bold,
+      fontSize: 18,
+      color: tokens.color.status.error,
+    },
+  });
