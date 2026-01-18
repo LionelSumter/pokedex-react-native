@@ -7,7 +7,7 @@ export const i18n = new I18n({
     common: { back: 'Back' },
 
     allPokemon: 'All Pokémon',
-    favorites: 'Favorites',
+    favorites: 'My Favorites',
 
     // Common
     loading: 'Loading…',
@@ -58,7 +58,7 @@ export const i18n = new I18n({
     common: { back: 'Vorige' },
 
     allPokemon: 'Alle Pokémon',
-    favorites: 'Favorieten',
+    favorites: 'Mijn Favorieten',
 
     // Common
     loading: 'Laden…',

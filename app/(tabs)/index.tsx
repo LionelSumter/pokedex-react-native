@@ -1,4 +1,5 @@
 // app/(tabs)/index.tsx
+import FadeInView from '@/components/ui/fade-in-view';
 import PokemonCard from '@/components/ui/pokemon-card';
 import { getTokens } from '@/constants/tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -129,10 +130,10 @@ export default function AllPokemonScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={s.safe} edges={['left', 'right']}>
-        <View style={s.center}>
+        <FadeInView style={s.center}>
           <ActivityIndicator size="large" />
           <Text style={s.muted}>{i18n.t('loadingPokemon')}</Text>
-        </View>
+        </FadeInView>
       </SafeAreaView>
     );
   }
@@ -191,10 +192,10 @@ export default function AllPokemonScreen() {
         onRefresh={() => refetch()}
         ListFooterComponent={
           isFetchingNextPage ? (
-            <View style={s.footer}>
+            <FadeInView style={s.footer}>
               <ActivityIndicator />
               <Text style={s.muted}>{i18n.t('loadingMore')}</Text>
-            </View>
+            </FadeInView>
           ) : null
         }
       />
