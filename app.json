@@ -40,7 +40,9 @@
         }
       ],
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      "expo-localization",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

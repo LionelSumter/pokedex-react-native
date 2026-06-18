@@ -51,66 +51,66 @@ Join our community of developers creating universal apps.
 
 Required items
 
- - [x] Working Expo Go project (QR scannen werkt)
+- [x] Working Expo Go project (QR scannen werkt)
 
- - [x] PokeAPI gebruikt (https://pokeapi.co/)
+- [x] PokeAPI gebruikt (https://pokeapi.co/)
 
- - [x] Lijst met Pokémon wordt geladen (FlatList)
+- [x] Lijst met Pokémon wordt geladen (FlatList)
 
- - [x] Filteren via zoekbalk
+- [x] Filteren via zoekbalk
 
- - [x] Pokémon detailpagina met metadata, stats, evolutions
+- [x] Pokémon detailpagina met metadata, stats, evolutions
 
- Navigatie lijst → detail
+Navigatie lijst → detail
 
- - [x]Favorieten toevoegen/verwijderen (SQLite)
+- [x] Favorieten toevoegen/verwijderen (SQLite)
 
- - [x]Types met unieke kleuren
+- [x] Types met unieke kleuren
 
- - [x] Swipeable tabs (react-native-tab-view)
+- [x] Swipeable tabs (react-native-tab-view)
 
-- [x]  Favorietenlijst met empty state
+- [x] Favorietenlijst met empty state
 
- - [x] Pokémon acties: Favorite, Share API, Open detail
+- [x] Pokémon acties: Favorite, Share API, Open detail
 
- - [x] Loading en error states voor alle async calls
+- [x] Loading en error states voor alle async calls
 
- - [x] Fetch lijst
+- [x] Fetch lijst
 
- - [x] Fetch details
+- [x] Fetch details
 
- - [x] Fetch evolution chain
+- [x] Fetch evolution chain
 
 Project setup
 
- - [x] TanStack Query voor API-calls
+- [x] TanStack Query voor API-calls
 
- - [x] Expo Router navigatie
+- [x] Expo Router navigatie
 
- - [x] SQLite voor local storage
+- [x] SQLite voor local storage
 
- - [x] TypeScript zonder TS-errors
+- [x] TypeScript zonder TS-errors
 
- - [x] ESLint zonder errors
+- [x] ESLint zonder errors
 
- - [x] Separation of Concerns (duidelijke structuur)
+- [x] Separation of Concerns (duidelijke structuur)
 
- - [x] Expo Font (Rubik)
+- [x] Expo Font (Rubik)
 
 Optional items (extra punten)
 
- - [x] Dark mode support (theming)
+- [x] Dark mode support (theming)
 
- - [x] Infinite scroll (useInfiniteQuery + onEndReached)
+- [x] Infinite scroll (useInfiniteQuery + onEndReached)
 
- - [-] Clean TypeScript: geen any, geen casts, geen ts-ignore
+- [-] Clean TypeScript: geen any, geen casts, geen ts-ignore
 
- - [x] Geen bugs of console errors
+- [x] Geen bugs of console errors
 
- - [x ] Animations (FadeInView / Press feedback)
+- [x] Animations (FadeInView / Press feedback)
 
-- [ x]  Pixel Perfect (iOS/Android spacing + radius tokens)
+- [x] Pixel Perfect (iOS/Android spacing + radius tokens)
 
- - [ x]Localizations (EN/NL via expo-localization)
+- [x] Localizations (EN/NL via expo-localization)
 
- - [ -] Pokémon Battle Feature 💯
+- [-] Pokémon Battle Feature 💯
